@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeQuiz Editor</title>
+<script src="/common.js"></script>
+<style>
+  :root { --bg: #f4f2f9; --card: #fff; --ink: #1d1530; --muted: #6b6280; --line: #e3def0; --accent: #46178f;
+          --ok: #26890c; --part: #d89e00; --bad: #e21b3c; --code-bg: #1e1b2e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: var(--accent); color: #fff; position: sticky; top: 0; z-index: 5; }
+  .top b { font-size: 18px; }
+  .top .sp { flex: 1; }
+  .top a { color: #fff; font-weight: 700; }
+  .save { padding: 3px 10px; border-radius: 999px; font-weight: 700; background: rgba(255,255,255,.15); }
+  .save.dirty { background: #ffb703; color: var(--ink); }
+  .save.err { background: var(--bad); color: #fff; }
+  button, select { font: inherit; font-weight: 700; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 5px 11px; border-radius: 7px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { color: var(--bad); }
+  button.small { padding: 2px 8px; font-size: 12px; }
+  input[type=text], input[type=number], textarea { font: inherit; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; background: #fff; color: var(--ink); }
+  input[type=text]:focus, input[type=number]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { width: 100%; resize: vertical; line-height: 1.4; }
+  textarea.code { font: 13px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--code-bg); color: #f1eefb; tab-size: 4; }
+  textarea.mono { font: 13px/1.4 ui-monospace, "Cascadia Code", Consolas, monospace; }
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; padding: 14px 16px; align-items: start; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; min-width: 0; }
+  h3 { margin: 0 0 8px; font-size: 15px; }
+  .hint { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .qz { padding: 7px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .qz:hover { background: var(--bg); }
+  .qz.sel { border-color: var(--accent); background: #f0eafc; }
+  .qz .t { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qz .m { color: var(--muted); font-size: 12px; }
+  .main { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 1100px) { .layout, .main { grid-template-columns: 1fr; } }
+  .qitem { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .qitem:hover { background: var(--bg); }
+  .qitem.sel { border-color: var(--accent); background: #f0eafc; }
+  .qitem .t { flex: 1; font-weight: 700; overflow-wrap: anywhere; line-height: 1.3; }
+  .qitem .n { color: var(--muted); font-size: 12px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 1400px) { .two { grid-template-columns: 1fr; } }
+  .preview { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; min-height: 160px; overflow: auto; max-height: 560px; }
+  .imgs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .imgs .im { width: 150px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; font-size: 12px; }
+  .imgs img { width: 100%; height: 90px; object-fit: contain; background: var(--bg); border-radius: 4px; }
+  .imgs .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 4px 0; }
+  .drop { outline: 3px dashed var(--accent); outline-offset: 4px; }
+  .test { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 10px 0; }
+  .test.pass { border-left: 5px solid var(--ok); }
+  .test.fail { border-left: 5px solid var(--bad); }
+  .test .head { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+  .test .head input.name { flex: 1; min-width: 180px; }
+  .test .num { width: 70px; }
+  .test .res { margin-top: 8px; padding: 6px 8px; border-radius: 6px; font: 12px/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+  .test .res.ok { background: #eef7ea; color: #1b5e08; }
+  .test .res.no { background: #fff3f4; color: #8a0d22; }
+  .kind { font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: #f0eafc; color: var(--accent); }
+  .banner { padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-weight: 600; }
+  .banner.warn { background: #fff6dc; border: 1px solid #ffd77a; }
+  .banner.err { background: #fff3f4; border: 1px solid #f5b5bf; color: #8a0d22; }
+  .banner.ok { background: #eef7ea; border: 1px solid #cfe6c5; }
+  .summary { font-weight: 700; }
+  pre.out { background: #fff3f4; color: #8a0d22; padding: 8px 10px; border-radius: 8px; white-space: pre-wrap; max-height: 220px; overflow: auto; font: 12px ui-monospace, Consolas, monospace; }
+  .help { font-size: 12.5px; line-height: 1.5; }
+  .help code, .help pre { font-family: ui-monospace, Consolas, monospace; background: var(--bg); border-radius: 4px; padding: 0 4px; }
+  .help pre { padding: 6px 8px; margin: 4px 0; white-space: pre-wrap; }
+  details > summary { cursor: pointer; font-weight: 700; }
+  .hidden { display: none !important; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="top">
+  <b>CodeQuiz Editor</b>
+  <span class="save" id="saveState">No quiz open</span>
+  <span class="sp"></span>
+  <a href="/host" target="host">Host console ↗</a>
+</div>
+
+<div class="layout">
+  <!-- sidebar: quizzes -->
+  <div>
+    <div class="card">
+      <div class="row" style="margin-bottom:8px"><h3 style="margin:0" class="grow">Quizzes</h3><button class="primary" id="newQuiz">+ New</button></div>
+      <div id="quizList"></div>
+    </div>
+    <div class="card">
+      <h3>Import</h3>
+      <div class="row">
+        <button id="importFileBtn">From a file…</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      </div>
+      <div class="hint" style="margin:6px 0">or drop a <b>.quiz.json</b> file anywhere on this page.</div>
+      <div class="row"><input type="text" id="importUrl" class="grow" placeholder="Share link from another laptop"><button id="importUrlBtn">Import</button></div>
+      <div id="importMsg" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <details>
+        <summary>Recently deleted (<span id="trashCount">0</span>)</summary>
+        <div id="trash" style="margin-top:8px"></div>
+      </details>
+      <div class="hint" style="margin-top:8px">Quiz files are saved in<br><code id="folder" style="word-break:break-all"></code></div>
+    </div>
+  </div>
+
+  <!-- main -->
+  <div id="mainBox">
+    <div class="card empty" id="welcome">
+      <b>Pick a quiz on the left, or make a new one.</b><br>
+      Every change is saved automatically. Each quiz is one file (text, images, tests and solutions in one place).<br>
+      To move a quiz to another laptop: <b>Export file</b> here and <b>Import</b> it there, or use a <b>Share link</b> on the same Wi-Fi.
+    </div>
+    <div id="editor" class="hidden">
+      <div id="banner"></div>
+      <div class="card">
+        <div class="row">
+          <label class="f grow">Quiz title<input type="text" id="qzTitle"></label>
+        </div>
+        <label class="f" style="margin-top:8px">Setup &amp; rules for students (optional; shown as a fold-out box on every question, same formatting as statements)
+          <textarea class="mono" id="qzDesc" rows="3"></textarea></label>
+        <div class="row" style="margin-top:10px">
+          <button id="exportBtn" title="Download this quiz as one file (includes images, tests and reference solutions)">⬇ Export file</button>
+          <button id="shareBtn" title="Make a link another laptop on the same Wi-Fi can import from (30 minutes)">🔗 Share link</button>
+          <button id="dupBtn">Duplicate</button>
+          <button id="backupsBtn">Older versions…</button>
+          <span class="grow"></span>
+          <button id="delBtn" class="danger">Delete quiz…</button>
+        </div>
+        <div id="shareBox" class="hidden" style="margin-top:10px"></div>
+        <div id="backupsBox" class="hidden" style="margin-top:10px"></div>
+        <details style="margin-top:12px">
+          <summary>Given code &amp; test helpers (shared by all questions)</summary>
+          <div class="two" style="margin-top:8px">
+            <label class="f">Given code: students see it, it's compiled with every submission (e.g. a Room class)
+              <textarea class="code" id="qzProvided" rows="10" spellcheck="false"></textarea></label>
+            <label class="f">Hidden test helpers: only for the tests, students don't see them (e.g. a method that builds a labyrinth)
+              <textarea class="code" id="qzHelpers" rows="10" spellcheck="false"></textarea></label>
+          </div>
+          <div class="hint">If a student writes a class with the same name as a given class, their version is used instead.</div>
+        </details>
+      </div>
+
+      <div class="main">
+        <div class="card">
+          <div class="row" style="margin-bottom:6px"><h3 style="margin:0" class="grow">Questions</h3><button class="primary small" id="addQ">+ Add</button></div>
+          <div id="qList"></div>
+        </div>
+        <div id="qEditor"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let QUIZZES = [], Q = null, curQ = null, lastCheck = {};   // lastCheck[testId] = result of the last check
+let checkSummary = null, stCardRef = null;
+let saveTimer = null, saving = false, dirty = false, conflict = false, failedSaves = 0;
+
+// ---------------- server calls ----------------
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || r.statusText); e.status = r.status; e.data = j; throw e; }
+  return j;
+}
+const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+
+async function loadList() {
+  const j = await api("/api/quizzes");
+  QUIZZES = j.quizzes;
+  $("folder").textContent = j.folder;
+  $("trashCount").textContent = j.trash.length;
+  $("trash").replaceChildren(...(j.trash.length ? j.trash.map(t => el("div", { className: "row", style: "margin:4px 0" },
+    el("span", { className: "grow", textContent: `${t.title} (${t.deleted})` }),
+    el("button", { className: "small", textContent: "Restore", onclick: async () => { showImportResult(await post("/api/trash/restore", { file: t.file })); loadList(); } }))) :
+    [el("div", { className: "hint", textContent: "Nothing deleted." })]));
+  renderQuizList();
+}
+
+function renderQuizList() {
+  $("quizList").replaceChildren(...(QUIZZES.length ? QUIZZES.map(z => {
+    const d = el("div", { className: "qz" + (Q && Q.id === z.id ? " sel" : "") },
+      el("div", { className: "t", textContent: z.title }),
+      el("div", { className: "m", textContent: z.broken ? "can't be read" : `${z.questions} question${z.questions === 1 ? "" : "s"} · ${(z.updated || "").replace("T", " ")}` }));
+    d.onclick = () => openQuiz(z.id);
+    return d;
+  }) : [el("div", { className: "hint", textContent: "No quizzes yet." })]));
+}
+
+async function openQuiz(id) {
+  if (!(await flush())) return;
+  try { Q = await api("/api/quiz/" + id); }
+  catch (e) { setBanner("err", "Could not open this quiz: " + e.message); return; }
+  curQ = Q.questions.length ? Q.questions[0].id : null;
+  lastCheck = {}; checkSummary = null; conflict = false; dirty = false;
+  try { localStorage.setItem("cq_editor_last", id); } catch {}
+  setBanner(); $("shareBox").classList.add("hidden"); $("backupsBox").classList.add("hidden");
+  renderAll(); setSave("saved", "Saved");
+}
+
+// ---------------- saving (autosave, never silently loses work) ----------------
+function setSave(kind, textValue) { const s = $("saveState"); s.textContent = textValue; s.className = "save" + (kind === "dirty" ? " dirty" : kind === "err" ? " err" : ""); }
+function changed() {
+  if (!Q) return;
+  dirty = true;
+  if (!conflict) setSave("dirty", "Unsaved changes…");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 700);
+}
+async function save() {
+  if (!Q || !dirty || conflict) return true;
+  if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); return false; }
+  saving = true; dirty = false;
+  setSave("dirty", "Saving…");
+  try {
+    const r = await api("/api/quiz/" + Q.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quiz: Q, base_rev: Q.rev }) });
+    Q.rev = r.rev; Q.updated = r.updated; failedSaves = 0;
+    if (!dirty) setSave("saved", "Saved ✓ " + new Date().toLocaleTimeString());
+    const z = QUIZZES.find(z => z.id === Q.id);
+    if (z) { z.title = Q.title; z.questions = Q.questions.length; z.updated = r.updated; renderQuizList(); }
+    return true;
+  } catch (e) {
+    dirty = true;
+    if (e.status === 409) {
+      conflict = true;
+      setSave("err", "Not saved: conflict");
+      setBanner("err", "This quiz was changed somewhere else (another tab, an import or a restore) since you opened it.",
+        [["Load the other version (my last changes are lost)", () => openQuiz(Q.id)],
+         ["Keep my version (overwrite the other)", () => { conflict = false; Q.rev = e.data.rev; setBanner(); save(); }]]);
+    } else {
+      failedSaves++;
+      setSave("err", "NOT SAVED, retrying… (" + e.message + ")");
+      clearTimeout(saveTimer); saveTimer = setTimeout(save, Math.min(10000, 1500 * failedSaves));
+    }
+    return false;
+  } finally { saving = false; }
+}
+async function flush() {
+  clearTimeout(saveTimer);
+  for (let i = 0; i < 20 && (dirty || saving) && !conflict; i++) {
+    if (!saving) await save(); else await new Promise(r => setTimeout(r, 150));
+  }
+  if (dirty) { setBanner("err", "Your changes could not be saved yet. Fix that before leaving this quiz."); return false; }
+  return true;
+}
+window.addEventListener("beforeunload", e => { if (dirty || saving) { e.preventDefault(); e.returnValue = ""; } });
+
+function setBanner(kind, message, actions = []) {
+  const b = $("banner");
+  if (!kind) { b.replaceChildren(); return; }
+  b.replaceChildren(el("div", { className: "banner " + kind }, message,
+    ...actions.map(([t, f]) => el("button", { textContent: t, style: "margin-left:8px", onclick: f })),
+    el("button", { className: "small", textContent: "×", style: "float:right", onclick: () => setBanner() })));
+}
+
+// ---------------- quiz level ----------------
+$("newQuiz").onclick = async () => {
+  if (!(await flush())) return;
+  const q = await post("/api/quiz", { title: "New quiz" });
+  await loadList(); await openQuiz(q.id);
+  $("qzTitle").select();
+};
+$("qzTitle").oninput = e => { Q.title = e.target.value; changed(); };
+$("qzProvided").oninput = e => { Q.provided = e.target.value; changed(); };
+$("qzDesc").oninput = e => { Q.description = e.target.value; changed(); };
+$("qzHelpers").oninput = e => { Q.helpers = e.target.value; changed(); };
+$("qzProvided").addEventListener("keydown", codeKeys);
+$("qzHelpers").addEventListener("keydown", codeKeys);
+$("exportBtn").onclick = async () => { if (await flush()) location.href = `/api/quiz/${Q.id}/export`; };
+$("dupBtn").onclick = async () => { if (!(await flush())) return; const c = await post(`/api/quiz/${Q.id}/duplicate`); await loadList(); openQuiz(c.id); };
+$("delBtn").onclick = async e => {
+  const b = e.target;
+  if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = "Click again to delete"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Delete quiz…"; }, 4000); return; }
+  await flush();
+  await post(`/api/quiz/${Q.id}/delete`);
+  Q = null; curQ = null; dirty = false; setSave("", "No quiz open");
+  renderAll(); loadList();
+};
+$("shareBtn").onclick = async () => {
+  if (!(await flush())) return;
+  const r = await post(`/api/quiz/${Q.id}/share`);
+  const inp = el("input", { type: "text", value: r.url, readOnly: true, style: "width:100%;font-family:monospace" });
+  $("shareBox").replaceChildren(el("div", { className: "banner warn" },
+    el("div", { textContent: `Share link (works for ${r.minutes} minutes, on the same Wi-Fi):` }), inp,
+    el("div", { className: "row", style: "margin-top:6px" },
+      el("button", { textContent: "Copy", onclick: () => { inp.select(); navigator.clipboard?.writeText(r.url); } }),
+      el("span", { className: "hint", textContent: "On the other laptop: Editor → Import → paste the link. It includes the reference solutions, so don't give it to students." }))));
+  $("shareBox").classList.remove("hidden");
+};
+$("backupsBtn").onclick = async () => {
+  const box = $("backupsBox");
+  if (!box.classList.contains("hidden")) { box.classList.add("hidden"); return; }
+  if (!(await flush())) return;
+  const r = await api(`/api/quiz/${Q.id}/backups`);
+  box.replaceChildren(el("div", { className: "banner warn" },
+    el("div", { textContent: "Older versions of this quiz (kept automatically, at most one every 3 minutes). Restoring keeps the current version as a backup too." }),
+    ...(r.backups.length ? r.backups.map(b => el("div", { className: "row", style: "margin-top:4px" },
+      el("span", { className: "grow", textContent: `${b.when}  (${Math.round(b.size / 1024)} KB)` }),
+      el("button", { className: "small", textContent: "Restore", onclick: async () => {
+        await post(`/api/quiz/${Q.id}/restore`, { file: b.file }); box.classList.add("hidden"); await openQuiz(Q.id); setBanner("ok", "Restored the version from " + b.when + "."); } }))) :
+      [el("div", { className: "hint", textContent: "No older versions yet." })])));
+  box.classList.remove("hidden");
+};
+
+// ---------------- import ----------------
+let pendingImport = null;
+function showImportResult(r) {
+  const box = $("importMsg");
+  if (r.status === "exists") {
+    box.replaceChildren(el("div", { className: "banner warn" },
+      el("div", { textContent: `"${r.title}" is already here (last changed ${r.current.updated.replace("T", " ")}). The file is from ${(r.incoming.exported || r.incoming.updated).replace("T", " ")}.` }),
+      r.warning ? el("div", { textContent: "⚠ " + r.warning }) : null,
+      el("div", { className: "row", style: "margin-top:6px" },
+        el("button", { textContent: "Replace mine", title: "The current version is kept under Older versions", onclick: () => pendingImport && pendingImport("replace") }),
+        el("button", { textContent: "Import as a copy", onclick: () => pendingImport && pendingImport("copy") }),
+        el("button", { textContent: "Cancel", onclick: () => box.replaceChildren() }))));
+    return;
+  }
+  const msg = r.status === "same" ? `"${r.title}" is already here and identical. Nothing to do.` : `Imported "${r.title}".`;
+  box.replaceChildren(el("div", { className: "banner " + (r.warning ? "warn" : "ok") }, msg, r.warning ? el("div", { textContent: "⚠ " + r.warning }) : null));
+  loadList().then(() => openQuiz(r.id));
+}
+async function importText(textValue) {
+  pendingImport = async mode => {
+    try { showImportResult(await api("/api/import?mode=" + mode, { method: "POST", body: textValue })); }
+    catch (e) { $("importMsg").replaceChildren(el("div", { className: "banner err", textContent: e.message })); }
+  };
+  if (await flush()) pendingImport("ask");
+}
+$("importFileBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (f) importText(await f.text()); };
+$("importUrlBtn").onclick = async () => {
+  const url = $("importUrl").value.trim();
+  if (!url) return;
+  pendingImport = async mode => {
+    try { showImportResult(await post("/api/import_url", { url, mode })); }
+    catch (e) { $("importMsg").replaceChildren(el("div", { className: "banner err", textContent: e.message })); }
+  };
+  if (await flush()) pendingImport("ask");
+};
+document.addEventListener("dragover", e => { if ([...e.dataTransfer.items].some(i => i.kind === "file")) e.preventDefault(); });
+document.addEventListener("drop", async e => {
+  const f = [...e.dataTransfer.files][0];
+  if (!f) return;
+  e.preventDefault();
+  if (f.type.startsWith("image/")) { if (curQ) addImages([f]); return; }
+  importText(await f.text());
+});
+
+// ---------------- questions ----------------
+function question() { return Q && Q.questions.find(q => q.id === curQ); }
+function rid() { return Math.random().toString(16).slice(2, 10); }
+function newQuestion() {
+  return { id: rid(), title: "Question " + (Q.questions.length + 1), minutes: 5, statement: "", images: [],
+           className: "Solution", starter: "public class Solution {\n\n    public static int answer(int n) {\n        return 0;\n    }\n}\n",
+           solution: "", tests: [] };
+}
+$("addQ").onclick = () => { const q = newQuestion(); Q.questions.push(q); curQ = q.id; changed(); renderAll(); };
+
+function renderQList() {
+  const box = $("qList");
+  box.replaceChildren(...Q.questions.map((q, i) => {
+    const up = el("button", { className: "small", textContent: "↑", title: "Move up", disabled: i === 0 });
+    const dn = el("button", { className: "small", textContent: "↓", title: "Move down", disabled: i === Q.questions.length - 1 });
+    const move = d => e => { e.stopPropagation(); const a = Q.questions; [a[i], a[i + d]] = [a[i + d], a[i]]; changed(); renderAll(); };
+    up.onclick = move(-1); dn.onclick = move(1);
+    const d = el("div", { className: "qitem" + (q.id === curQ ? " sel" : "") },
+      el("span", { className: "n", textContent: i + 1 + "." }), el("span", { className: "t", textContent: q.title }),
+      el("span", { className: "n", textContent: q.tests.length + "t" }), up, dn);
+    d.onclick = () => { curQ = q.id; renderAll(); };
+    return d;
+  }));
+  if (!Q.questions.length) box.append(el("div", { className: "hint", textContent: "No questions yet." }));
+}
+
+function field(labelText, input) { return el("label", { className: "f" }, labelText, input); }
+function textInput(obj, key, props = {}, onChange) {
+  const i = el("input", { type: "text", value: obj[key] ?? "", ...props });
+  i.oninput = () => { obj[key] = props.type === "number" ? (i.value === "" ? "" : Number(i.value)) : i.value; changed(); onChange && onChange(); };
+  return i;
+}
+function area(obj, key, cls, rows, onChange) {
+  const t = el("textarea", { className: cls, rows, spellcheck: false, value: obj[key] ?? "" });
+  t.oninput = () => { obj[key] = t.value; changed(); onChange && onChange(); };
+  if (cls === "code") t.addEventListener("keydown", codeKeys);
+  return t;
+}
+function codeKeys(e) {
+  const t = e.target;
+  if (e.key === "Tab") { e.preventDefault(); t.setRangeText("    ", t.selectionStart, t.selectionEnd, "end"); t.dispatchEvent(new Event("input")); }
+  else if (e.key === "Enter") {
+    const s = t.selectionStart, before = t.value.slice(0, s);
+    const indent = before.slice(before.lastIndexOf("\n") + 1).match(/^\s*/)[0];
+    e.preventDefault();
+    t.setRangeText("\n" + indent + (/\{\s*$/.test(before) ? "    " : ""), s, t.selectionEnd, "end");
+    t.dispatchEvent(new Event("input"));
+  }
+}
+
+function renderQEditor() {
+  const box = $("qEditor");
+  const q = question();
+  if (!q) { box.replaceChildren(el("div", { className: "card empty", textContent: "Add a question on the left." })); return; }
+  const idx = Q.questions.indexOf(q);
+
+  // --- basics
+  const del = el("button", { className: "danger", textContent: "Delete question…" });
+  del.onclick = () => {
+    if (!del.dataset.armed) { del.dataset.armed = 1; del.textContent = "Click again to delete"; setTimeout(() => { delete del.dataset.armed; del.textContent = "Delete question…"; }, 4000); return; }
+    Q.questions.splice(idx, 1); curQ = Q.questions[Math.max(0, idx - 1)]?.id ?? null; changed(); renderAll();
+  };
+  const dup = el("button", { textContent: "Duplicate", onclick: () => {
+    const c = JSON.parse(JSON.stringify(q)); c.id = rid(); c.title += " (copy)"; c.tests.forEach(t => t.id = rid());
+    Q.questions.splice(idx + 1, 0, c); curQ = c.id; changed(); renderAll(); } });
+  const basics = el("div", { className: "card" },
+    el("div", { className: "row" },
+      el("div", { className: "grow" }, field("Title", textInput(q, "title", { style: "width:100%" }, renderQList))),
+      field("Minutes", textInput(q, "minutes", { type: "number", min: 0.25, step: 0.5, style: "width:90px" })),
+      field("Class name", textInput(q, "className", { style: "width:150px", title: "The class the student writes. Output tests run its main method." })),
+      el("div", { style: "align-self:end" }, dup), el("div", { style: "align-self:end" }, del)));
+
+  // --- statement + images
+  const preview = el("div", { className: "preview md" });
+  const imgs = el("div", { className: "imgs" });
+  const st = area(q, "statement", "mono", 16, () => updatePreview());
+  st.placeholder = "Write the task here.\n\n- bullet points with a dash\n`code` in backticks, **bold**\n> a question to think about\n\n```\ncode block\n```\nPaste or drop a screenshot to add an image.";
+  function updatePreview() {
+    renderStatement(preview, q.statement, q.images, im => im.data);
+    if (!q.statement.trim() && !q.images.length) preview.innerHTML = '<span class="hint">The preview appears here.</span>';
+  }
+  function renderImgs() {
+    imgs.replaceChildren(...q.images.map((im, k) => el("div", { className: "im" },
+      el("img", { src: im.data, alt: im.name }), el("div", { className: "nm", title: im.name, textContent: im.name }),
+      el("div", { className: "row" },
+        el("button", { className: "small", textContent: "Put in text", title: "Insert at the cursor. Without this, images are shown below the text.", onclick: () => insertAtCursor(st, `\n![${im.name}](img:${im.id})\n`) }),
+        el("button", { className: "small danger", textContent: "Remove", onclick: () => {
+          q.images.splice(k, 1);
+          q.statement = q.statement.split(`](img:${im.id})`).join("](img:removed)"); st.value = q.statement;
+          changed(); renderImgs(); updatePreview(); } })))));
+  }
+  st.addEventListener("paste", e => {
+    const files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+    if (files.length) { e.preventDefault(); addImages(files, st); }
+  });
+  const fileIn = el("input", { type: "file", accept: "image/*", multiple: true, className: "hidden" });
+  fileIn.onchange = () => { addImages([...fileIn.files], st); fileIn.value = ""; };
+  const stCard = el("div", { className: "card" },
+    el("div", { className: "row", style: "margin-bottom:6px" }, el("h3", { style: "margin:0", className: "grow", textContent: "Statement" }),
+      el("button", { textContent: "🖼 Add image…", onclick: () => fileIn.click() }), fileIn),
+    el("div", { className: "two" }, st, preview), imgs,
+    el("div", { className: "hint", style: "margin-top:6px", textContent: "Formatting: - bullets, 1. numbered, `code`, **bold**, *italic*, > question box, ``` code block ```, # heading. Images: Add image, paste (Ctrl+V) or drop them here. Big photos are shrunk automatically." }));
+  stCard.addEventListener("dragover", e => { e.preventDefault(); stCard.classList.add("drop"); });
+  stCard.addEventListener("dragleave", () => stCard.classList.remove("drop"));
+  stCard.addEventListener("drop", e => { stCard.classList.remove("drop"); const f = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/")); if (f.length) { e.preventDefault(); e.stopPropagation(); addImages(f, st); } });
+  stCard._refresh = () => { renderImgs(); updatePreview(); };
+  stCardRef = stCard;
+
+  // --- code
+  const codeCard = el("div", { className: "card" },
+    el("div", { className: "two" },
+      field("Starter code (what students see in their editor at the start)", area(q, "starter", "code", 12)),
+      field("Reference solution (never shown to students; used to check your tests)", area(q, "solution", "code", 12))));
+
+  // --- tests
+  const testsCard = el("div", { className: "card" });
+  box.replaceChildren(basics, stCard, codeCard, testsCard);
+  stCard._refresh();
+  renderTests(q, testsCard);
+}
+function insertAtCursor(t, s) { t.focus(); t.setRangeText(s, t.selectionStart, t.selectionEnd, "end"); t.dispatchEvent(new Event("input")); }
+
+async function addImages(files, textarea) {
+  const q = question(); if (!q) return;
+  for (const f of files) {
+    if (!f.type.startsWith("image/")) continue;
+    let data;
+    try { data = await shrinkImage(f); } catch { setBanner("err", "Could not read the image " + f.name); continue; }
+    const name = (f.name && f.name !== "image.png") ? f.name : "image " + (q.images.length + 1);
+    const im = { id: rid(), name, data };
+    q.images.push(im);
+    if (textarea) insertAtCursor(textarea, `\n![${name}](img:${im.id})\n`);
+  }
+  changed();
+  stCardRef?._refresh?.();
+}
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const url = reader.result;
+      if (file.type === "image/svg+xml" || file.type === "image/gif") return resolve(url);
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX = 1800;
+        const big = img.width > MAX || img.height > MAX;
+        if (!big && file.size < 1_200_000) return resolve(url);
+        const s = Math.min(1, MAX / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        const g = c.getContext("2d");
+        g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const png = file.type === "image/png" ? c.toDataURL("image/png") : null;
+        resolve(png && png.length < 1_500_000 ? png : c.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = url;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------------- tests ----------------
+const COMPARE = { lines: "Same lines (spaces at line ends ignored)", exact: "Exactly the same", tokens: "Same words/numbers (any spacing)",
+                  anyorder: "Same lines, any order", numbers: "Only the numbers (±0.000001)" };
+
+function newTest(q, kind) {
+  const base = { id: rid(), name: "", kind, weight: 1, hidden: false, timeout: 2, stdin: "", expected: "", compare: "lines", code: "" };
+  if (kind === "code") base.code = `check(${q.className}.answer(3), 3);`;
+  return base;
+}
+
+function renderTests(q, card) {
+  const tw = q.tests.reduce((s, t) => s + (Number(t.weight) || 0), 0);
+  const res = el("div");
+  if (checkSummary && checkSummary.qid === q.id) res.append(checkSummary.node);
+  const checkBtn = el("button", { className: "primary", textContent: "▶ Check tests with reference solution" });
+  checkBtn.onclick = () => runCheck(q, "solution", res, checkBtn, card);
+  const starterBtn = el("button", { textContent: "Run tests on starter code", title: "Usually most tests should fail here" });
+  starterBtn.onclick = () => runCheck(q, "starter", res, starterBtn, card);
+  const fillBtn = el("button", { textContent: "Fill empty expected outputs", title: "Runs the reference solution and copies what it prints into output tests whose expected output is empty" });
+  fillBtn.onclick = () => runCheck(q, "solution", res, fillBtn, card, true);
+  card.replaceChildren(
+    el("div", { className: "row" }, el("h3", { style: "margin:0", className: "grow", textContent: `Tests (${q.tests.length}, total weight ${tw})` }),
+      el("button", { textContent: "+ Output test", title: "Run the program with this input and compare what it prints", onclick: () => { q.tests.push(newTest(q, "output")); changed(); renderTests(q, card); renderQList(); } }),
+      el("button", { textContent: "+ Code test", title: "A few lines of Java that call the student's methods and check the results", onclick: () => { q.tests.push(newTest(q, "code")); changed(); renderTests(q, card); renderQList(); } })),
+    el("div", { className: "row", style: "margin-top:8px" }, checkBtn, fillBtn, starterBtn),
+    res,
+    el("details", { className: "help", style: "margin-top:8px" }, el("summary", { textContent: "How do tests work?" }), helpBox(q)),
+    ...q.tests.map((t, i) => testCard(q, t, i, card)));
+  if (!q.tests.length) card.append(el("div", { className: "hint", style: "margin-top:10px", textContent: "No tests yet. Add an output test (input → expected output) or a code test (Java that checks a method)." }));
+}
+
+function helpBox(q) {
+  const d = el("div");
+  d.innerHTML = `
+  <p><b>Output test:</b> runs <code>main</code> of class <code>${esc(q.className)}</code> with the input as System.in and compares what it prints with the expected output.</p>
+  <p><b>Code test:</b> Java statements. Call the student's code with the class name and check results:</p>
+  <pre>check(${esc(q.className)}.isPrime(7), true);          // equal (2 == 2L, arrays element by element)
+check(${esc(q.className)}.average(a), 2.5, 1e-9);     // doubles with a tolerance
+check(x > 0, "message if it fails");
+checkOutput(() -> ${esc(q.className)}.printAll(5), "1\\n2\\n3\\n4\\n5");
+checkOutputAnyOrder(() -> ${esc(q.className)}.printExits(r), "R3\\nR4");
+String printed = output(() -> ${esc(q.className)}.print());
+String printed = output("3 4\\n", () -> ${esc(q.className)}.main(new String[0]));  // with input
+fail("custom message");</pre>
+  <p>You can use loops, variables and the given code / hidden helpers (e.g. <code>Room[] r = Lab.build(...)</code>). <code>java.util.*</code> is imported.</p>
+  <p><b>Weight:</b> partial points = weighted share of tests passed, so give hard tests a bigger weight. <b>Hidden:</b> students only see that a hidden test failed, not its input. <b>Time:</b> seconds before a test counts as too slow.</p>
+  <p>Every test runs with fresh static fields, its own input/output and a big stack. If a test doesn't compile against a student's code (e.g. a wrong method name), only that test fails.</p>`;
+  return d;
+}
+
+function testCard(q, t, i, card) {
+  const r = lastCheck[t.id];
+  const wrap = el("div", { className: "test" + (r ? (r.ok ? " pass" : " fail") : "") });
+  const kind = el("select", {}, el("option", { value: "output", textContent: "Output test" }), el("option", { value: "code", textContent: "Code test" }));
+  kind.value = t.kind;
+  kind.onchange = () => { t.kind = kind.value; if (t.kind === "code" && !t.code) t.code = newTest(q, "code").code; changed(); renderTests(q, card); };
+  const hidden = el("input", { type: "checkbox", checked: t.hidden });
+  hidden.onchange = () => { t.hidden = hidden.checked; changed(); };
+  const mv = d => () => { const a = q.tests; if (i + d < 0 || i + d >= a.length) return; [a[i], a[i + d]] = [a[i + d], a[i]]; changed(); renderTests(q, card); };
+  const del = el("button", { className: "small danger", textContent: "Delete" });
+  del.onclick = () => { if (!del.dataset.armed) { del.dataset.armed = 1; del.textContent = "Sure?"; return; } q.tests.splice(i, 1); changed(); renderTests(q, card); renderQList(); };
+  const name = textInput(t, "name", { className: "name", placeholder: `Test ${i + 1} (name students see, e.g. "empty array")` });
+  wrap.append(el("div", { className: "head" },
+    el("span", { className: "kind", textContent: "#" + (i + 1) }),
+    el("div", { className: "grow" }, field("Name", name)),
+    field("Kind", kind),
+    field("Weight", textInput(t, "weight", { type: "number", min: 0, step: 1, className: "num" }, () => renderTestsHeader(q, card))),
+    field("Time (s)", textInput(t, "timeout", { type: "number", min: 0.2, step: 0.5, className: "num" })),
+    el("label", { className: "f", title: "Students only see that it failed, not the input or expected output" }, "Hidden", hidden),
+    el("div", { className: "row" },
+      el("button", { className: "small", textContent: "↑", onclick: mv(-1) }), el("button", { className: "small", textContent: "↓", onclick: mv(1) }),
+      el("button", { className: "small", textContent: "Copy", onclick: () => { const c = { ...t, id: rid(), name: t.name ? t.name + " (copy)" : "" }; q.tests.splice(i + 1, 0, c); changed(); renderTests(q, card); renderQList(); } }),
+      del)));
+  if (t.kind === "output") {
+    const cmp = el("select", {}, ...Object.entries(COMPARE).map(([k, v]) => el("option", { value: k, textContent: v })));
+    cmp.value = t.compare;
+    cmp.onchange = () => { t.compare = cmp.value; changed(); };
+    const exp = area(t, "expected", "mono", 4);
+    wrap.append(el("div", { className: "two", style: "margin-top:8px" },
+      field("Input (System.in)", area(t, "stdin", "mono", 4)),
+      field("Expected output", exp)),
+      el("div", { className: "row", style: "margin-top:6px" }, el("span", { className: "hint", textContent: "Compare:" }), cmp));
+    if (r && r.output !== undefined && r.which === "solution" && r.output !== t.expected) {
+      wrap.append(el("div", { className: "row", style: "margin-top:6px" },
+        el("button", { className: "small", textContent: "Use the reference solution's output as expected", onclick: () => { t.expected = r.output; exp.value = r.output; changed(); } })));
+    }
+  } else {
+    wrap.append(el("div", { style: "margin-top:8px" }, field("Java code", area(t, "code", "code", Math.min(14, Math.max(3, t.code.split("\n").length + 1))))));
+  }
+  if (r) {
+    const who = r.which === "solution" ? "Reference solution" : "Starter code";
+    wrap.append(el("div", { className: "res " + (r.ok ? "ok" : "no"), textContent: r.ok ? `✓ ${who} passes` : `✗ ${who}: ${r.status}\n${r.detail || ""}` }));
+  }
+  return wrap;
+}
+function renderTestsHeader(q, card) {
+  const tw = q.tests.reduce((s, t) => s + (Number(t.weight) || 0), 0);
+  const h = card.querySelector("h3"); if (h) h.textContent = `Tests (${q.tests.length}, total weight ${tw})`;
+}
+
+function stripImages(quiz) {
+  const c = JSON.parse(JSON.stringify(quiz));
+  for (const q of c.questions) q.images = [];
+  return c;
+}
+
+async function runCheck(q, which, resBox, btn, card, fill = false) {
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Running…";
+  resBox.replaceChildren(el("div", { className: "hint", style: "margin-top:8px", textContent: "Compiling and running the tests…" }));
+  try {
+    const r = await post("/api/check", { quiz: stripImages(Q), qid: q.id, which });
+    lastCheck = {};
+    let filled = 0;
+    r.results.forEach((x, k) => {
+      const t = q.tests[k];
+      if (!t || t.id !== x.id) return;
+      if (fill && t.kind === "output" && !t.expected.trim() && x.status === "ok") { t.expected = x.output; filled++; x.ok = true; x.detail = ""; }
+      lastCheck[t.id] = { ...x, which };
+    });
+    if (filled) changed();
+    const who = which === "solution" ? "Reference solution" : "Starter code";
+    const kids = [el("div", { className: "summary" }, `${who}: ${r.passed} / ${r.total} tests pass (weighted ${r.wpassed} / ${r.wtotal})` + (fill ? ` · filled ${filled} expected output${filled === 1 ? "" : "s"}` : ""))];
+    if (r.compile && r.compile.ok === false) kids.push(el("pre", { className: "out", textContent: r.compile.output }));
+    else if (r.error) kids.push(el("pre", { className: "out", textContent: r.error }));
+    const ok = r.passed === r.total && r.total > 0;
+    checkSummary = { qid: q.id, node: el("div", { className: "banner " + (which === "solution" ? (ok ? "ok" : "err") : "warn"), style: "margin:8px 0 0" }, ...kids) };
+    if (question() === q) renderTests(q, card);
+  } catch (e) {
+    resBox.replaceChildren(el("div", { className: "banner err", style: "margin-top:8px", textContent: e.message }));
+  } finally { btn.disabled = false; btn.textContent = label; }
+}
+
+// ---------------- render ----------------
+function renderAll() {
+  renderQuizList();
+  const has = !!Q;
+  $("welcome").classList.toggle("hidden", has);
+  $("editor").classList.toggle("hidden", !has);
+  if (!has) return;
+  if (document.activeElement !== $("qzTitle")) $("qzTitle").value = Q.title;
+  $("qzProvided").value = Q.provided || "";
+  $("qzDesc").value = Q.description || "";
+  $("qzHelpers").value = Q.helpers || "";
+  if (!question() && Q.questions.length) curQ = Q.questions[0].id;
+  renderQList();
+  renderQEditor();
+}
+
+loadList().then(() => {
+  let want = new URLSearchParams(location.search).get("quiz");
+  if (!want) { try { want = localStorage.getItem("cq_editor_last"); } catch {} }
+  if (want && QUIZZES.some(z => z.id === want)) openQuiz(want);
+});
+</script>
+</body>
+</html>

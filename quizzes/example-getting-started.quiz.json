@@ -1,0 +1,170 @@
+{
+ "format": "codequiz-quiz",
+ "version": 1,
+ "id": "example-getting-started",
+ "title": "Example: getting started",
+ "description": "This is an example quiz to show what the editor can do. Duplicate it to start your own.",
+ "provided": "",
+ "helpers": "",
+ "questions": [
+  {
+   "id": "a6d4a1bb",
+   "title": "Sum of two numbers",
+   "minutes": 4.0,
+   "statement": "Read two whole numbers from the input and print their **sum**.\n\n- The numbers can be negative.\n- They can be big: up to 2 000 000 000 each.\n\n> Which type do you need for the result?\n\n**Example**\n```\ninput:  3 4\noutput: 7\n```",
+   "images": [],
+   "className": "Sum",
+   "starter": "import java.util.Scanner;\n\npublic class Sum {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        \n    }\n}\n",
+   "solution": "import java.util.Scanner;\n\npublic class Sum {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        long a = scanner.nextLong();\n        long b = scanner.nextLong();\n        System.out.println(a + b);\n    }\n}\n",
+   "tests": [
+    {
+     "id": "03fae586",
+     "name": "3 + 4",
+     "kind": "output",
+     "weight": 1,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "3 4\n",
+     "expected": "7",
+     "compare": "tokens",
+     "code": ""
+    },
+    {
+     "id": "9b4fb628",
+     "name": "negative numbers",
+     "kind": "output",
+     "weight": 2,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "-5 2\n",
+     "expected": "-3",
+     "compare": "tokens",
+     "code": ""
+    },
+    {
+     "id": "c691431e",
+     "name": "on two lines",
+     "kind": "output",
+     "weight": 1,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "10\n20\n",
+     "expected": "30",
+     "compare": "tokens",
+     "code": ""
+    },
+    {
+     "id": "deec1c8e",
+     "name": "big numbers (int overflow!)",
+     "kind": "output",
+     "weight": 3,
+     "hidden": true,
+     "timeout": 2.0,
+     "stdin": "2000000000 2000000000\n",
+     "expected": "4000000000",
+     "compare": "tokens",
+     "code": ""
+    }
+   ]
+  },
+  {
+   "id": "44000a3f",
+   "title": "Is it prime?",
+   "minutes": 6.0,
+   "statement": "Write a method that returns `true` if `n` is a prime number.\n\n- `n` can be any `int`, also 0, 1 or negative (those are not prime).\n- It must be fast, also for very big `n`.\n\n```\npublic static boolean isPrime(int n)\n```\n\n**Examples:** `isPrime(7) == true`, `isPrime(1) == false`, `isPrime(91) == false`",
+   "images": [],
+   "className": "Solution",
+   "starter": "public class Solution {\n\n    public static boolean isPrime(int n) {\n        return false;\n    }\n}\n",
+   "solution": "public class Solution {\n\n    public static boolean isPrime(int n) {\n        if (n < 2) {\n            return false;\n        }\n        for (int i = 2; i <= n / i; i++) {\n            if (n % i == 0) {\n                return false;\n            }\n        }\n        return true;\n    }\n}\n",
+   "tests": [
+    {
+     "id": "dd4a95dd",
+     "name": "7 is prime",
+     "kind": "code",
+     "weight": 1,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(7), true);"
+    },
+    {
+     "id": "2da1c9ae",
+     "name": "2 is prime",
+     "kind": "code",
+     "weight": 2,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(2), true);"
+    },
+    {
+     "id": "5bfc8a6e",
+     "name": "1 is not prime",
+     "kind": "code",
+     "weight": 2,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(1), false);"
+    },
+    {
+     "id": "da55e878",
+     "name": "0 and negatives",
+     "kind": "code",
+     "weight": 2,
+     "hidden": true,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(0), false);\ncheck(Solution.isPrime(-7), false);"
+    },
+    {
+     "id": "1c7cd9f9",
+     "name": "91 = 7 * 13",
+     "kind": "code",
+     "weight": 1,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(91), false);"
+    },
+    {
+     "id": "2de7863e",
+     "name": "all numbers up to 100",
+     "kind": "code",
+     "weight": 1,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "int count = 0;\nfor (int n = 1; n <= 100; n++) {\n    if (Solution.isPrime(n)) count++;\n}\ncheck(count == 25, \"there are 25 primes up to 100, your method finds \" + count);"
+    },
+    {
+     "id": "99fb0ac9",
+     "name": "very big prime 2147483647 (fast? no overflow?)",
+     "kind": "code",
+     "weight": 3,
+     "hidden": false,
+     "timeout": 2.0,
+     "stdin": "",
+     "expected": "",
+     "compare": "lines",
+     "code": "check(Solution.isPrime(2147483647), true);"
+    }
+   ]
+  }
+ ],
+ "created": "2026-11-11T19:55:14",
+ "updated": "2026-11-11T19:55:14",
+ "rev": 1
+}

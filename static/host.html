@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeQuiz Host</title>
+<script src="/common.js"></script>
+<style>
+  :root { --bg: #f4f2f9; --card: #fff; --ink: #1d1530; --muted: #6b6280; --line: #e3def0; --accent: #46178f;
+          --ok: #26890c; --part: #d89e00; --bad: #e21b3c; --blue: #1368ce; --code-bg: #1e1b2e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: var(--accent); color: #fff; position: sticky; top: 0; z-index: 2; }
+  .top b { font-size: 18px; }
+  .top .link { background: rgba(255,255,255,.15); padding: 4px 10px; border-radius: 6px; font-family: ui-monospace, Consolas, monospace; font-size: 15px; }
+  .top .sp { flex: 1; }
+  .top a { color: #fff; }
+  button, select { font: inherit; font-weight: 700; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .top button { background: rgba(255,255,255,.15); color: #fff; border-color: transparent; }
+  .top button.on { background: #ffb703; color: var(--ink); }
+  .quizbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .quizbar select { max-width: 360px; }
+  .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; padding: 14px 16px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+  h3 { margin: 0 0 8px; font-size: 15px; }
+  .qitem { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; padding: 8px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+  .qitem:hover { background: var(--bg); }
+  .qitem.view { border-color: var(--accent); background: #f0eafc; }
+  .qitem .t { font-weight: 700; }
+  .qitem .m { color: var(--muted); font-size: 12px; grid-column: 1; }
+  .qitem .warn { color: var(--bad); font-weight: 700; }
+  .qitem .ctl { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 4px; align-items: center; }
+  .qitem input { width: 48px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; text-align: center; }
+  .live { color: var(--ok); font-weight: 800; }
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .timer { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; padding: 2px 12px; border-radius: 999px; background: #ffb703; }
+  .timer.done { background: var(--line); }
+  .progress { flex: 1; min-width: 160px; height: 12px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--ok); transition: width .3s; }
+  .allin { background: var(--ok); color: #fff; padding: 3px 10px; border-radius: 999px; font-weight: 800; }
+  .main { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 1200px) { .main { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 6px 6px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; color: var(--muted); font-weight: 700; }
+  tr.sub { cursor: pointer; }
+  tr.sub:hover { background: var(--bg); }
+  tr.sel { background: #f0eafc !important; }
+  td.nm { max-width: 130px; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff; }
+  .b-ok { background: var(--ok); } .b-bad { background: var(--bad); } .b-wait { background: var(--muted); } .b-part { background: var(--part); }
+  .tests { margin: 8px 0; max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .tests > div { padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .tests > div:last-child { border-bottom: 0; }
+  .tests .f { background: #fff3f4; }
+  .tests .d { font-family: ui-monospace, Consolas, monospace; color: #8a0d22; white-space: pre-wrap; }
+  .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  .g-correct { color: var(--ok); font-weight: 800; } .g-partial { color: var(--part); font-weight: 800; }
+  .g-wrong { color: var(--bad); font-weight: 800; } .g-custom { color: var(--blue); font-weight: 800; }
+  .missing { color: var(--muted); }
+  pre.code { background: var(--code-bg); color: #f1eefb; padding: 10px 0; border-radius: 8px; overflow: auto; max-height: 62vh; margin: 8px 0;
+             font: 13.5px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace; counter-reset: ln; }
+  pre.code span { display: block; padding: 0 12px 0 0; }
+  pre.code span::before { counter-increment: ln; content: counter(ln); display: inline-block; width: 38px; padding-right: 10px; text-align: right; color: #77708f; user-select: none; }
+  pre.out { background: #fff3f4; color: #8a0d22; padding: 8px 10px; border-radius: 8px; white-space: pre-wrap; max-height: 180px; overflow: auto; font: 12px ui-monospace, Consolas, monospace; }
+  .grade { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .grade .c { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .grade .p { background: var(--part); color: #fff; border-color: var(--part); }
+  .grade .w { background: var(--bad); color: #fff; border-color: var(--bad); }
+  .grade input { padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; }
+  .grade input.pts { width: 80px; }
+  .grade input.note { flex: 1; min-width: 180px; }
+  .hint { color: var(--muted); font-size: 12px; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+  .players td button { padding: 2px 8px; font-size: 12px; }
+  .msg { color: var(--bad); font-weight: 700; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="top">
+  <b>CodeQuiz Host</b>
+  <span>Students go to</span><span class="link" id="addr"></span>
+  <span id="pcount"></span>
+  <span class="sp"></span>
+  <span>Students see:</span>
+  <button id="ph-lobby">Lobby</button>
+  <button id="ph-question">Question</button>
+  <button id="ph-leaderboard">Leaderboard</button>
+  <button onclick="window.open('/board','board')">Projector board ↗</button>
+</div>
+<div class="quizbar">
+  <b>Quiz:</b> <span id="curQuiz" class="hint"></span>
+  <span style="flex:1"></span>
+  <select id="quizSel"></select>
+  <button id="useBtn" class="primary">Use this quiz</button>
+  <button id="reloadBtn" title="Take the latest version from the editor (players and points stay)">Reload changes</button>
+  <button id="editBtn">Edit quizzes ↗</button>
+  <span id="msg" class="msg"></span>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="card">
+      <h3>Questions</h3>
+      <div class="hint" style="margin-bottom:6px">Minutes box, then ▶ to start. Click a row to view its submissions.</div>
+      <div id="qlist"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Players</h3>
+      <table class="players"><tbody id="players"></tbody></table>
+      <div style="margin-top:10px"><button id="resetBtn">Reset players and points…</button></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="bar">
+        <h3 style="margin:0" id="viewTitle">No question started yet</h3>
+        <span style="flex:1"></span>
+        <span class="timer done hidden" id="timer">--:--</span>
+        <button id="closeBtn" class="hidden">Close now</button>
+        <button id="ext1" class="hidden">+1 min</button>
+        <button id="ext2" class="hidden">+2 min</button>
+      </div>
+      <div class="bar">
+        <div class="progress"><div id="prog" style="width:0"></div></div>
+        <span id="progTxt"></span>
+        <span id="allin" class="allin hidden">Everyone submitted!</span>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="card">
+        <div class="bar" style="margin-bottom:4px">
+          <h3 style="margin:0">Submissions <span class="hint">(oldest first)</span></h3>
+          <span style="flex:1"></span>
+          <button id="gradeAllBtn" title="Grade every ungraded submission that has test results: all passed = Correct, none = Wrong, otherwise points by the weighted share of tests passed. Already graded ones are not touched.">Grade all by tests</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Time</th><th>Compiles</th><th>Tests</th><th>Grade</th></tr></thead>
+          <tbody id="subs"></tbody>
+        </table>
+        <div id="notYet" class="hint" style="margin-top:10px"></div>
+      </div>
+      <div class="card" id="detail"><div class="empty">Click a submission to see the code.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let S = null, viewQ = null, selPid = null, detailKey = "", skew = 0, busy = false;
+const BASE = { correct: 1000, partial: 500, wrong: 0 }, MAX_BONUS = 500;
+
+async function act(body) {
+  $("msg").textContent = "";
+  const r = await fetch("/api/host", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) $("msg").textContent = (await r.json().catch(() => ({}))).error || "Failed";
+  await poll();
+}
+function testShare(sub) { const t = sub.tests; return t && !t.pending && t.wtotal ? t.wpassed / t.wtotal : null; }
+function pointsFor(verdict, sub) {  // same formula as compute_points in server.py
+  if (!BASE[verdict]) return 0;
+  const speed = sub.limit > 0 ? Math.max(0, 1 - sub.t / sub.limit) : 0;
+  const full = BASE.correct + MAX_BONUS * speed;
+  if (verdict === "correct") return Math.round(full);
+  const share = testShare(sub);
+  if (share === null) return Math.round(BASE.partial + MAX_BONUS * speed / 2);
+  return Math.round(full * share);
+}
+function compileBadge(c) {
+  if (!c) return el("span", { className: "badge b-wait", textContent: "…" });
+  if (c.ok) return el("span", { className: "badge b-ok", textContent: "yes" });
+  if (c.ok === false) return el("span", { className: "badge b-bad", textContent: "no" });
+  return el("span", { className: "badge b-wait", textContent: "?" });
+}
+function testsBadge(t) {
+  if (!t) return el("span", { className: "missing", textContent: "–" });
+  if (t.pending) return el("span", { className: "badge b-wait", textContent: "running…" });
+  if (!t.total) return el("span", { className: "badge b-bad", textContent: "error" });
+  const pct = t.wtotal ? ` · ${Math.round(100 * t.wpassed / t.wtotal)}%` : "";
+  return el("span", { className: "badge " + (t.passed === t.total ? "b-ok" : t.passed ? "b-part" : "b-bad"), textContent: `${t.passed}/${t.total}${pct}` });
+}
+function gradeCell(g) {
+  if (!g) return el("span", { className: "missing", textContent: "–" });
+  return el("span", { className: "g-" + g.verdict, textContent: g.points + (g.verdict === "custom" ? "" : " " + g.verdict[0].toUpperCase()) });
+}
+function sortedSubs(q) {
+  const subs = S.subs[q] || {};
+  return Object.entries(subs).filter(([pid]) => S.players[pid]).sort((a, b) => a[1].at - b[1].at);
+}
+function qIndex(id) { return S.questions.findIndex(q => q.id === id); }
+
+$("ph-lobby").onclick = () => act({ action: "lobby" });
+$("ph-question").onclick = () => act({ action: "show_question" });
+$("ph-leaderboard").onclick = () => act({ action: "leaderboard" });
+$("gradeAllBtn").onclick = () => { if (viewQ !== null) act({ action: "grade_all_tests", q: viewQ }); };
+$("closeBtn").onclick = () => act({ action: "close" });
+$("ext1").onclick = () => act({ action: "extend", minutes: 1 });
+$("ext2").onclick = () => act({ action: "extend", minutes: 2 });
+$("useBtn").onclick = () => { if ($("quizSel").value) { viewQ = null; selPid = null; act({ action: "use_quiz", id: $("quizSel").value }); } };
+$("reloadBtn").onclick = () => { if (S.quiz) act({ action: "use_quiz", id: S.quiz.id }); };
+$("editBtn").onclick = () => window.open("/editor" + (S && S.quiz ? "?quiz=" + encodeURIComponent(S.quiz.id) : ""), "editor");
+$("resetBtn").onclick = () => {
+  const b = $("resetBtn");
+  if (b.dataset.armed) { act({ action: "reset" }); b.textContent = "Reset players and points…"; delete b.dataset.armed; viewQ = null; selPid = null; }
+  else { b.dataset.armed = 1; b.textContent = "Click again to delete ALL players, code and points"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Reset players and points…"; }, 4000); }
+};
+
+function renderTop() {
+  $("addr").textContent = S.address;
+  $("pcount").textContent = Object.keys(S.players).length + " joined";
+  for (const p of ["lobby", "question", "leaderboard"]) $("ph-" + p).classList.toggle("on", S.phase === p);
+  $("curQuiz").textContent = S.quiz ? `${S.quiz.title} (${S.questions.length} questions)` : "none yet: pick one and click \"Use this quiz\"";
+  $("reloadBtn").classList.toggle("hidden", !S.quiz);
+  const sel = $("quizSel");
+  if (document.activeElement !== sel) {
+    const keep = sel.value || (S.quiz && S.quiz.id);
+    sel.replaceChildren(...S.quizzes.filter(q => !q.broken).map(q => el("option", { value: q.id, textContent: `${q.title} (${q.questions})` })));
+    if (keep) sel.value = keep;
+  }
+}
+
+function renderQList() {
+  const box = $("qlist");
+  if (document.activeElement && document.activeElement.dataset.q !== undefined) return; // don't wipe a minutes box being edited
+  box.innerHTML = "";
+  if (!S.questions.length) box.append(el("div", { className: "hint", textContent: "No quiz loaded." }));
+  S.questions.forEach((q, i) => {
+    const n = sortedSubs(q.id).length;
+    const live = S.q === q.id && S.open;
+    const mins = el("input", { value: q.minutes, title: "minutes" }); mins.dataset.q = q.id;
+    mins.onclick = e => e.stopPropagation();
+    const go = el("button", { className: "primary", textContent: S.q === q.id ? "↺" : "▶", title: S.q === q.id ? "Restart timer" : "Start" });
+    go.onclick = e => { e.stopPropagation(); viewQ = q.id; selPid = null; act({ action: "open", q: q.id, minutes: mins.value }); };
+    const warn = q.tests ? "" : "no tests!";
+    const item = el("div", { className: "qitem" + (viewQ === q.id ? " view" : "") },
+      el("div", { className: "t", textContent: `${i + 1}. ${q.title}` }),
+      el("div", { className: "ctl" }, mins, go),
+      el("div", { className: "m" }, live ? el("span", { className: "live", textContent: "● live · " }) : "",
+        `${n} submitted · ${q.tests} tests`, warn ? el("span", { className: "warn", textContent: " · " + warn }) : null));
+    item.onclick = () => { viewQ = q.id; selPid = null; detailKey = ""; render(); };
+    box.append(item);
+  });
+}
+
+function renderPlayers() {
+  const tb = $("players"); tb.innerHTML = "";
+  if (!S.leaderboard.length) tb.append(el("tr", {}, el("td", { className: "hint", textContent: "Nobody yet." })));
+  for (const r of S.leaderboard) {
+    const kick = el("button", { textContent: "kick" });
+    kick.onclick = () => { if (kick.dataset.armed) act({ action: "kick", pid: r.pid }); else { kick.dataset.armed = 1; kick.textContent = "sure?"; } };
+    tb.append(el("tr", {}, el("td", { textContent: r.rank }), el("td", { className: "nm", textContent: r.name }),
+      el("td", { textContent: r.points }), el("td", {}, kick)));
+  }
+}
+
+function renderView() {
+  const q = viewQ;
+  const idx = q === null ? -1 : qIndex(q);
+  const isCur = q !== null && q === S.q;
+  $("timer").classList.toggle("hidden", !isCur);
+  for (const id of ["ext1", "ext2"]) $(id).classList.toggle("hidden", !isCur || S.phase !== "question");
+  $("closeBtn").classList.toggle("hidden", !isCur || !S.open);
+  if (idx < 0) { $("viewTitle").textContent = "No question started yet"; $("subs").innerHTML = ""; $("progTxt").textContent = ""; $("prog").style.width = 0; $("allin").classList.add("hidden"); $("notYet").textContent = ""; return; }
+  $("viewTitle").textContent = `${idx + 1}. ${S.questions[idx].title}` + (isCur ? (S.open ? " (open)" : " (closed)") : "");
+  const subs = sortedSubs(q);
+  const total = Object.keys(S.players).length;
+  $("prog").style.width = total ? (100 * subs.length / total) + "%" : 0;
+  $("progTxt").textContent = `${subs.length}/${total} submitted · ${subs.filter(([, s]) => s.grade).length} graded`;
+  $("allin").classList.toggle("hidden", !(total && subs.length === total));
+  const tb = $("subs"); tb.innerHTML = "";
+  if (!subs.length) tb.append(el("tr", {}, el("td", { colSpan: 5, className: "hint", textContent: "No submissions yet." })));
+  for (const [pid, s] of subs) {
+    const tr = el("tr", { className: "sub" + (pid === selPid ? " sel" : "") },
+      el("td", { className: "nm", textContent: S.players[pid].name }),
+      el("td", { textContent: fmtTime(s.t) + (s.count > 1 ? ` (v${s.count})` : "") }),
+      el("td", {}, compileBadge(s.compile)), el("td", {}, testsBadge(s.tests)), el("td", {}, gradeCell(s.grade)));
+    tr.onclick = () => { selPid = pid; detailKey = ""; render(); };
+    tb.append(tr);
+  }
+  const submitted = new Set(subs.map(([p]) => p));
+  const missing = Object.entries(S.players).filter(([p]) => !submitted.has(p)).map(([, p]) => p.name);
+  $("notYet").textContent = missing.length ? "Not submitted: " + missing.join(", ") : "";
+}
+
+function renderDetail() {
+  const box = $("detail");
+  const s = viewQ !== null && selPid ? (S.subs[viewQ] || {})[selPid] : null;
+  if (!s || !S.players[selPid]) { if (detailKey !== "none") { box.innerHTML = '<div class="empty">Click a submission to see the code.</div>'; detailKey = "none"; } return; }
+  const key = [viewQ, selPid, s.at, JSON.stringify(s.compile), JSON.stringify(s.grade), JSON.stringify(s.tests)].join("|");
+  if (key === detailKey) return;
+  const noteVal = box.querySelector(".note")?.value;
+  const sameSub = detailKey.startsWith(viewQ + "|" + selPid + "|" + s.at);
+  detailKey = key;
+  box.innerHTML = "";
+  box.append(el("div", { className: "bar" },
+    el("h3", { style: "margin:0", textContent: S.players[selPid].name }),
+    el("span", { className: "hint", textContent: `submitted at ${fmtTime(s.t)}${s.count > 1 ? `, version ${s.count}` : ""}` }),
+    compileBadge(s.compile)));
+  const pre = el("pre", { className: "code" });
+  for (const line of s.code.replace(/\t/g, "    ").split("\n")) pre.append(el("span", { textContent: line || " " }));
+  box.append(pre);
+  if (s.compile && s.compile.ok === false && s.compile.output) box.append(el("pre", { className: "out", textContent: s.compile.output }));
+  const t = s.tests;
+  const head = el("div", { className: "bar", style: "margin:4px 0 0" }, el("b", { textContent: "Tests " }), testsBadge(t));
+  if (!(t && t.pending)) {
+    const rt = el("button", { className: "primary", textContent: t ? "Compile & run tests again" : "Compile & run tests now" });
+    rt.onclick = () => act({ action: "retest", q: viewQ, pid: selPid });
+    head.append(rt);
+  }
+  if (S.open && viewQ === S.q) head.append(el("span", { className: "hint", textContent: "also runs automatically when the question closes; students only see results after closing" }));
+  box.append(head);
+  if (t && t.error) box.append(el("pre", { className: "out", textContent: t.error }));
+  if (t && t.results && t.results.length) {
+    const list = el("div", { className: "tests" });
+    for (const r of [...t.results].sort((a, b) => a.ok - b.ok)) {
+      const row = el("div", { className: r.ok ? "" : "f" }, (r.ok ? "✓ " : "✗ ") + r.name,
+        r.weight !== 1 ? el("span", { className: "tag", textContent: "×" + r.weight }) : null,
+        r.hidden ? el("span", { className: "tag", textContent: "hidden" }) : null);
+      if (!r.ok && r.detail) row.append(el("div", { className: "d", textContent: r.detail }));
+      list.append(row);
+    }
+    box.append(list);
+  }
+  const note = el("input", { className: "note", placeholder: "Optional note the student sees (e.g. forgot the base case)" });
+  note.value = sameSub && noteVal !== undefined ? noteVal : (s.grade?.note || "");
+  const pts = el("input", { className: "pts", type: "number", placeholder: "points" });
+  const g = v => act({ action: "grade", q: viewQ, pid: selPid, verdict: v, note: note.value, points: pts.value });
+  const c = el("button", { className: "c", textContent: `Correct +${pointsFor("correct", s)} [1]`, onclick: () => g("correct") });
+  const share = testShare(s);
+  const pLabel = share === null ? `Partial +${pointsFor("partial", s)} [2]` : `By tests (${Math.round(100 * share)}%) +${pointsFor("partial", s)} [2]`;
+  const p = el("button", { className: "p", textContent: pLabel, onclick: () => g("partial") });
+  const w = el("button", { className: "w", textContent: "Wrong 0 [0]", onclick: () => g("wrong") });
+  const cu = el("button", { textContent: "Give", onclick: () => { if (pts.value !== "") g("custom"); } });
+  const row = el("div", { className: "grade" }, c, p, w, pts, cu);
+  if (s.grade) row.append(el("button", { textContent: "Ungrade", onclick: () => g(null) }));
+  box.append(row, el("div", { className: "grade", style: "margin-top:6px" }, note));
+  box.append(el("div", { className: "hint", style: "margin-top:6px",
+    textContent: (s.grade ? `Current: ${s.grade.points} (${s.grade.verdict}). ` : "") + "Correct = 1000 + speed bonus (up to 500). By tests = weighted share of tests passed × that (weights are set per test in the editor). Keys: 1 / 2 / 0 grade, J / K next / previous." }));
+}
+
+function render() {
+  if (!S) return;
+  if (viewQ !== null && qIndex(viewQ) < 0) { viewQ = null; selPid = null; }
+  if (viewQ === null && S.q !== null && qIndex(S.q) >= 0) viewQ = S.q;
+  renderTop(); renderQList(); renderPlayers(); renderView(); renderDetail();
+}
+
+document.addEventListener("keydown", e => {
+  if (!S || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+  const subs = viewQ !== null ? sortedSubs(viewQ) : [];
+  const idx = subs.findIndex(([p]) => p === selPid);
+  if (e.key === "j" || e.key === "k") {
+    if (!subs.length) return;
+    const n = e.key === "j" ? Math.min(subs.length - 1, idx + 1) : Math.max(0, idx - 1);
+    selPid = subs[n][0]; detailKey = ""; render();
+  } else if (selPid && ["1", "2", "0"].includes(e.key)) {
+    const note = $("detail").querySelector(".note")?.value || "";
+    const verdict = { "1": "correct", "2": "partial", "0": "wrong" }[e.key];
+    act({ action: "grade", q: viewQ, pid: selPid, verdict, note }).then(() => {
+      const nxt = sortedSubs(viewQ).find(([p, s]) => !s.grade && p !== selPid);
+      if (nxt) { selPid = nxt[0]; detailKey = ""; render(); }
+    });
+  }
+});
+
+function tickTimer() {
+  if (!S || !S.deadline) return;
+  const left = S.deadline - (Date.now() / 1000 + skew);
+  const t = $("timer");
+  t.textContent = S.open && left > 0 ? fmtTime(left) : "closed";
+  t.classList.toggle("done", !(S.open && left > 0));
+}
+async function poll() {
+  if (busy) return; busy = true;
+  try { const r = await fetch("/api/host"); S = await r.json(); skew = S.now - Date.now() / 1000; render(); }
+  catch { $("viewTitle").textContent = "⚠ Lost connection to the server"; }
+  finally { busy = false; }
+}
+poll(); setInterval(poll, 1500); setInterval(tickTimer, 250);
+</script>
+</body>
+</html>

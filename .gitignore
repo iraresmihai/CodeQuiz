@@ -1,0 +1,7 @@
+runner/build/
+state.json
+session_quiz.json
+quizzes/.backups/
+quizzes/.trash/
+__pycache__/
+*.pyc

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeQuiz</title>
+<script src="/common.js"></script>
+<style>
+  :root {
+    --bg: #2b1055; --bg2: #46178f; --card: #ffffff; --ink: #1d1530; --muted: #6b6280;
+    --accent: #ffb703; --ok: #26890c; --part: #d89e00; --bad: #e21b3c; --blue: #1368ce;
+    --code-bg: #f6f4fb; --line: #e3def0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         background: linear-gradient(160deg, var(--bg), var(--bg2)); color: var(--ink); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; color: #fff; margin-bottom: 16px; gap: 12px; }
+  header .logo { font-weight: 900; font-size: 22px; letter-spacing: .5px; }
+  header .quiz { opacity: .8; font-weight: 600; }
+  header .who { font-size: 14px; opacity: .9; text-align: right; }
+  .card { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.25); min-width: 0; }
+  .center { min-height: 60vh; display: grid; place-items: center; text-align: center; }
+  .center .card { max-width: 440px; width: 100%; }
+  h1 { margin: 0 0 8px; font-size: 26px; }
+  h2 { margin: 0 0 6px; font-size: 22px; }
+  p { line-height: 1.45; }
+  input[type=text] { width: 100%; font-size: 20px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 10px; text-align: center; font-weight: 700; }
+  input[type=text]:focus { outline: none; border-color: var(--bg2); }
+  button { font: inherit; font-weight: 800; border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer;
+           background: var(--ink); color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+  button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  button:disabled { opacity: .5; cursor: default; }
+  .big { width: 100%; font-size: 18px; margin-top: 12px; }
+  .err { color: var(--bad); font-weight: 700; min-height: 1.4em; margin-top: 8px; white-space: pre-wrap; }
+  .muted { color: var(--muted); }
+  .pulse { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); animation: p 1.2s infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes p { 0%,100% { transform: scale(.7); opacity: .6 } 50% { transform: scale(1); opacity: 1 } }
+  .qgrid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; }
+  @media (max-width: 860px) { .qgrid { grid-template-columns: 1fr; } }
+  .qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #fff; margin-bottom: 12px; }
+  .qnum { background: rgba(255,255,255,.15); padding: 6px 12px; border-radius: 999px; font-weight: 800; font-size: 14px; }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 900; font-size: 28px; background: var(--accent); color: var(--ink);
+           border-radius: 999px; padding: 4px 18px; min-width: 110px; text-align: center; }
+  .timer.low { background: var(--bad); color: #fff; animation: p 1s infinite; }
+  .timer.done { background: rgba(255,255,255,.2); color: #fff; animation: none; }
+  pre, textarea { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 14px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+  details { margin-top: 12px; } summary { cursor: pointer; font-weight: 700; color: var(--bg2); }
+  textarea { width: 100%; min-height: 420px; resize: vertical; padding: 12px; border: 2px solid var(--line); border-radius: 10px;
+             background: #1e1b2e; color: #f1eefb; line-height: 1.45; tab-size: 4; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .status { font-weight: 700; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; color: #fff; }
+  .b-ok { background: var(--ok); } .b-bad { background: var(--bad); } .b-wait { background: var(--muted); }
+  .compile-out { max-height: 200px; overflow: auto; font-size: 12.5px; white-space: pre-wrap; }
+  .result { font-size: 54px; font-weight: 900; margin: 6px 0; }
+  .v-correct { color: var(--ok); } .v-partial { color: var(--part); } .v-wrong { color: var(--bad); } .v-custom { color: var(--blue); }
+  .tlist { list-style: none; padding: 0; margin: 8px 0; text-align: left; }
+  .tlist li { padding: 6px 10px; border-radius: 8px; margin: 4px 0; background: #eef7ea; font-size: 14px; }
+  .tlist li.f { background: #fff3f4; }
+  .tlist .d { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; white-space: pre-wrap; color: #8a0d22; margin-top: 4px; }
+  .lb { list-style: none; padding: 0; margin: 12px 0 0; text-align: left; }
+  .lb li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; margin: 6px 0; background: var(--code-bg); font-weight: 700; }
+  .lb li.me { background: var(--accent); }
+  .lb .rk { width: 30px; text-align: center; font-weight: 900; }
+  .lb .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb .gain { color: var(--ok); font-size: 13px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><span class="logo">CodeQuiz</span> <span class="quiz" id="quizTitle"></span></div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <section id="v-join" class="center hidden">
+    <div class="card">
+      <h1>Join the session</h1>
+      <p class="muted">Enter the name you want on the leaderboard.</p>
+      <form id="joinForm">
+        <input type="text" id="name" maxlength="30" autocomplete="off" placeholder="Your name">
+        <button class="big" type="submit">Join</button>
+      </form>
+      <div class="err" id="joinErr"></div>
+    </div>
+  </section>
+
+  <section id="v-lobby" class="center hidden">
+    <div class="card">
+      <h1><span class="pulse"></span>You're in!</h1>
+      <p class="muted">Waiting for the next question…</p>
+      <p id="lobbyScore" class="status"></p>
+    </div>
+  </section>
+
+  <section id="v-question" class="hidden">
+    <div class="qhead">
+      <div class="qnum" id="qnum"></div>
+      <div class="timer" id="timer">--:--</div>
+    </div>
+    <div class="qgrid">
+      <div class="card">
+        <h2 id="qtitle"></h2>
+        <div class="md" id="qstatement"></div>
+        <div id="qclass" class="muted" style="font-size:14px;margin-top:10px"></div>
+        <details id="setupBox">
+          <summary>Setup &amp; rules</summary>
+          <div class="md" id="setup"></div>
+        </details>
+        <details id="providedBox">
+          <summary>Given code (you can use it, it's there when your code is tested)</summary>
+          <pre id="provided"></pre>
+        </details>
+      </div>
+      <div class="card">
+        <div id="editorBox">
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+          <div class="row">
+            <button id="submitBtn">Submit</button>
+            <span class="status" id="subStatus"></span>
+          </div>
+          <div class="err" id="subErr"></div>
+          <div id="compileBox" class="hidden"><pre class="compile-out" id="compileOut"></pre></div>
+        </div>
+        <div id="closedBox" class="hidden" style="text-align:center">
+          <h2 id="closedTitle">Time's up!</h2>
+          <div id="resultBox"></div>
+          <details style="text-align:left"><summary>Your submission</summary><pre id="myCode"></pre></details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-board" class="center hidden">
+    <div class="card" style="max-width:520px">
+      <h1>Leaderboard</h1>
+      <p id="myRank" class="status"></p>
+      <ul class="lb" id="lb"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+let pid = store.get("cq_pid") || "";
+let currentQ = null, clockSkew = 0, deadline = null, isOpen = false, resultKey = "";
+
+function show(view) { for (const v of ["join", "lobby", "question", "board"]) $("v-" + v).classList.toggle("hidden", v !== view); }
+function verdictText(g) { return { correct: "Correct!", partial: "Partly correct", wrong: "Not quite", custom: "Graded" }[g.verdict] || "Graded"; }
+function rankLine(me) { return me ? `You're #${me.rank} of ${me.of} with ${me.points} points` : ""; }
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Something went wrong");
+  return j;
+}
+
+$("joinForm").onsubmit = async e => {
+  e.preventDefault();
+  $("joinErr").textContent = "";
+  try {
+    const j = await api("/api/join", { name: $("name").value, pid });
+    pid = j.pid; store.set("cq_pid", pid); store.set("cq_name", j.name);
+    poll();
+  } catch (err) { $("joinErr").textContent = err.message; }
+};
+$("name").value = store.get("cq_name") || "";
+
+// editor: tab inserts 4 spaces, enter keeps the indentation
+$("code").addEventListener("keydown", e => {
+  const t = e.target;
+  if (e.key === "Tab") {
+    e.preventDefault();
+    t.setRangeText("    ", t.selectionStart, t.selectionEnd, "end");
+  } else if (e.key === "Enter") {
+    const s = t.selectionStart, before = t.value.slice(0, s);
+    const indent = before.slice(before.lastIndexOf("\n") + 1).match(/^\s*/)[0];
+    const extra = /\{\s*$/.test(before) ? "    " : "";
+    e.preventDefault();
+    t.setRangeText("\n" + indent + extra, s, t.selectionEnd, "end");
+  }
+  saveDraft();
+});
+$("code").addEventListener("input", saveDraft);
+function saveDraft() { if (currentQ !== null) store.set("cq_draft_" + currentQ, $("code").value); }
+
+$("submitBtn").onclick = async () => {
+  $("subErr").textContent = "";
+  $("submitBtn").disabled = true;
+  try {
+    await api("/api/submit", { pid, code: $("code").value });
+    $("subStatus").textContent = "Sending…";
+    poll();
+  } catch (err) { $("subErr").textContent = err.message; }
+  finally { $("submitBtn").disabled = false; }
+};
+
+function renderQuestion(s) {
+  const q = s.question;
+  if (currentQ !== q.id) {
+    currentQ = q.id;
+    $("qnum").textContent = `Question ${q.number} of ${q.count}`;
+    $("qtitle").textContent = q.title;
+    renderStatement($("qstatement"), q.statement, q.images, im => im.url);
+    $("qclass").textContent = q.className ? `Your class: ${q.className}` : "";
+    renderStatement($("setup"), q.description || "", [], () => "");
+    $("setupBox").classList.toggle("hidden", !(q.description || "").trim());
+    $("provided").textContent = q.provided || "";
+    $("providedBox").classList.toggle("hidden", !(q.provided || "").trim());
+    $("code").value = store.get("cq_draft_" + q.id) ?? (s.mine ? s.mine.code : (q.starter || `public class ${q.className} {\n\n}\n`));
+  }
+  const mine = s.mine;
+  const graded = mine && mine.grade;
+  const editable = s.open && !graded;
+  $("editorBox").classList.toggle("hidden", !editable);
+  $("closedBox").classList.toggle("hidden", editable);
+
+  if (editable) {
+    if (mine) {
+      const st = el("span", { textContent: `Submitted at ${fmtTime(mine.t)}` + (mine.count > 1 ? ` (version ${mine.count})` : "") + ". You can resubmit until time is up. " });
+      let b;
+      if (mine.compile === null) b = el("span", { className: "badge b-wait", textContent: "checking…" });
+      else if (mine.compile.ok) b = el("span", { className: "badge b-ok", textContent: "compiles" });
+      else if (mine.compile.ok === false) b = el("span", { className: "badge b-bad", textContent: "doesn't compile" });
+      $("subStatus").replaceChildren(st, b || "");
+      const showOut = mine.compile && mine.compile.ok === false && mine.compile.output;
+      $("compileBox").classList.toggle("hidden", !showOut);
+      if (showOut) $("compileOut").textContent = mine.compile.output;
+    } else {
+      $("subStatus").textContent = "Not submitted yet.";
+      $("compileBox").classList.add("hidden");
+    }
+    return;
+  }
+  $("closedTitle").textContent = graded ? "" : (mine && s.open ? "Submitted" : "Time's up!");
+  const key = JSON.stringify([q.id, mine, s.me, s.open]);
+  if (key === resultKey) return;   // don't rebuild (keeps opened/closed details as they are)
+  resultKey = key;
+  const box = $("resultBox"); box.innerHTML = "";
+  if (graded) {
+    box.append(el("div", { className: "result v-" + graded.verdict, textContent: verdictText(graded) }),
+               el("h2", { textContent: `+${graded.points} points` }));
+    if (graded.note) box.append(el("p", { textContent: graded.note }));
+  } else if (mine) {
+    box.append(el("p", {}, el("span", { className: "pulse" }), "Your code is in. Waiting for the TA to grade it…"));
+  } else {
+    box.append(el("p", { className: "muted", textContent: "You didn't submit anything for this one." }));
+  }
+  const t = mine && mine.tests;
+  if (t) {
+    if (t.pending) box.append(el("p", { className: "status", textContent: "Running the tests on your code…" }));
+    else {
+      box.append(el("p", { className: "status", textContent: `Tests: ${t.passed} / ${t.total} passed` }));
+      if (t.error) box.append(el("pre", { className: "compile-out", style: "text-align:left", textContent: t.error }));
+      else if (t.results && t.results.length) {
+        const d = el("details", { style: "text-align:left", open: t.results.length <= 8 });
+        d.append(el("summary", { textContent: "Test results" }));
+        const ul = el("ul", { className: "tlist" });
+        for (const r of [...t.results].sort((a, b) => a.ok - b.ok)) {
+          ul.append(el("li", { className: r.ok ? "" : "f" }, (r.ok ? "✓ " : "✗ ") + r.name,
+            !r.ok && r.detail ? el("div", { className: "d", textContent: r.detail }) : null));
+        }
+        d.append(ul); box.append(d);
+      }
+    }
+  }
+  box.append(el("p", { className: "status", textContent: rankLine(s.me) }));
+  $("myCode").textContent = mine ? mine.code : "(nothing)";
+  $("myCode").parentElement.classList.toggle("hidden", !mine);
+}
+
+function renderBoard(s) {
+  $("myRank").textContent = rankLine(s.me);
+  $("lb").replaceChildren(...(s.leaderboard || []).map(r =>
+    el("li", { className: r.name === s.name ? "me" : "" },
+      el("span", { className: "rk", textContent: r.rank }), el("span", { className: "nm", textContent: r.name }),
+      el("span", { className: "gain", textContent: r.last ? `+${r.last}` : "" }), el("span", { textContent: r.points }))));
+}
+
+function render(s) {
+  clockSkew = s.now - Date.now() / 1000;
+  deadline = s.deadline; isOpen = s.open;
+  $("quizTitle").textContent = s.quiz ? "· " + s.quiz : "";
+  if (!s.known) { $("who").textContent = ""; show("join"); return; }
+  $("who").textContent = s.name + (s.me ? ` · ${s.me.points} pts` : "");
+  if (s.phase === "question" && s.question) { show("question"); renderQuestion(s); }
+  else if (s.phase === "leaderboard") { show("board"); renderBoard(s); }
+  else { show("lobby"); $("lobbyScore").textContent = s.me && s.me.points ? rankLine(s.me) : ""; }
+}
+
+function tickTimer() {
+  const t = $("timer");
+  if (!deadline) { t.textContent = "--:--"; return; }
+  const left = deadline - (Date.now() / 1000 + clockSkew);
+  if (!isOpen || left <= 0) { t.textContent = "0:00"; t.className = "timer done"; return; }
+  t.textContent = fmtTime(left);
+  t.className = "timer" + (left < 30 ? " low" : "");
+}
+
+let polling = false;
+async function poll() {
+  if (polling) return; polling = true;
+  try { render(await api("/api/state?pid=" + encodeURIComponent(pid))); }
+  catch { $("who").textContent = "Connection lost, retrying…"; }
+  finally { polling = false; }
+}
+poll(); setInterval(poll, 1500); setInterval(tickTimer, 250);
+</script>
+</body>
+</html>

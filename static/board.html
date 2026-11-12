@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CodeQuiz Board</title>
+<script src="/common.js"></script>
+<style>
+  :root { --bg: #2b1055; --bg2: #46178f; --accent: #ffb703; --ink: #1d1530; --ok: #26890c; --bad: #e21b3c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #fff;
+         background: linear-gradient(160deg, var(--bg), var(--bg2)); overflow-x: hidden; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 4vh 4vw; min-height: 100vh; display: flex; flex-direction: column; }
+  .brand { font-weight: 900; font-size: 2.4vh; opacity: .8; letter-spacing: 1px; }
+  .hidden { display: none !important; }
+  .join { text-align: center; margin: 4vh 0; }
+  .join .lbl { font-size: 3.2vh; opacity: .9; }
+  .join .url { display: inline-block; margin-top: 1.5vh; background: #fff; color: var(--ink); font-weight: 900; font-size: 7vh;
+               padding: 1.5vh 4vh; border-radius: 2vh; font-family: ui-monospace, Consolas, monospace; letter-spacing: -1px; }
+  .count { font-size: 3vh; font-weight: 800; margin: 3vh 0 2vh; text-align: center; }
+  .names { display: flex; flex-wrap: wrap; gap: 1.2vh; justify-content: center; }
+  .names span { background: rgba(255,255,255,.15); padding: 1vh 2vh; border-radius: 1vh; font-size: 2.6vh; font-weight: 800; animation: pop .35s ease-out; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+  .qtop { display: flex; justify-content: space-between; align-items: center; margin: 1.5vh 0; }
+  .qnum { font-size: 2.8vh; font-weight: 800; background: rgba(255,255,255,.15); padding: .8vh 2vh; border-radius: 999px; }
+  .timer { font-size: 9vh; font-weight: 900; font-variant-numeric: tabular-nums; background: var(--accent); color: var(--ink);
+           border-radius: 999px; padding: 0 4vh; min-width: 26vh; text-align: center; }
+  .timer.low { background: var(--bad); color: #fff; }
+  .timer.done { background: rgba(255,255,255,.2); color: #fff; }
+  /* the question fills exactly one screen: long statements flow into columns */
+  .wrap.fit { height: 100vh; min-height: 0; }
+  .qcard { background: #fff; color: var(--ink); border-radius: 2vh; padding: 3vh 3.5vh; flex: 1; min-height: 0; font-size: 2.3vh;
+           display: flex; flex-direction: column; overflow: hidden; }
+  .qcard h1 { font-size: 4.6vh; margin: 0 0 1vh; }
+  #v-question { min-height: 0; }
+  .qcard .md { flex: 1; min-height: 0; column-width: 22em; column-gap: 5vh; column-fill: auto; overflow-x: auto; }
+  .qcard .md > * { break-inside: avoid; }
+  .qcard .md > *:first-child { margin-top: 0; }
+  .qcard .md pre.md-code { white-space: pre-wrap; font-size: .85em; }
+  .qcard .md img.md-img { max-height: 42vh; max-width: 100%; }
+  .subs { margin-top: 2.5vh; display: flex; align-items: center; gap: 3vh; font-size: 3.4vh; font-weight: 900; }
+  .bar { flex: 1; height: 2.4vh; background: rgba(255,255,255,.2); border-radius: 999px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--accent); transition: width .5s; }
+  .lbh { font-size: 7vh; font-weight: 900; text-align: center; margin: 2vh 0 4vh; }
+  .rows { display: flex; flex-direction: column; gap: 1.6vh; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .r { display: flex; align-items: center; gap: 3vh; background: #fff; color: var(--ink); padding: 1.8vh 3vh; border-radius: 1.5vh;
+       font-size: 4vh; font-weight: 900; transform: translateX(-120%); animation: slide .6s forwards cubic-bezier(.2,.8,.2,1); }
+  @keyframes slide { to { transform: none } }
+  .r .rk { width: 7vh; height: 7vh; display: grid; place-items: center; border-radius: 50%; background: #eee; font-size: 3.4vh; }
+  .r:nth-child(1) .rk { background: #ffd54a; } .r:nth-child(2) .rk { background: #d9dde3; } .r:nth-child(3) .rk { background: #e8a86a; }
+  .r .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .r .gain { color: var(--ok); font-size: 2.8vh; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">CodeQuiz <span id="quiz" style="font-weight:600"></span></div>
+
+  <section id="v-lobby" class="hidden">
+    <div class="join"><div class="lbl">Open this on your laptop</div><div class="url" id="url"></div></div>
+    <div class="count" id="count"></div>
+    <div class="names" id="names"></div>
+  </section>
+
+  <section id="v-question" class="hidden" style="display:flex;flex-direction:column;flex:1">
+    <div class="qtop"><div class="qnum" id="qnum"></div><div class="timer" id="timer">--:--</div></div>
+    <div class="qcard">
+      <h1 id="qtitle"></h1>
+      <div class="md" id="qstatement"></div>
+    </div>
+    <div class="subs"><span id="subTxt"></span><div class="bar"><div id="subBar" style="width:0"></div></div></div>
+  </section>
+
+  <section id="v-leaderboard" class="hidden">
+    <div class="lbh">Leaderboard</div>
+    <div class="rows" id="rows"></div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let S = null, skew = 0, lastQ = null, lastBoard = "", lastNames = "";
+function show(v) {
+  for (const x of ["lobby", "question", "leaderboard"]) $("v-" + x).classList.toggle("hidden", x !== v);
+  document.querySelector(".wrap").classList.toggle("fit", v === "question");
+}
+
+function render() {
+  const phase = S.phase === "question" && S.question ? "question" : S.phase === "leaderboard" ? "leaderboard" : "lobby";
+  show(phase);
+  $("quiz").textContent = S.quiz ? "· " + S.quiz : "";
+  if (phase !== "leaderboard") lastBoard = "";
+  if (phase === "lobby") {
+    $("url").textContent = S.address.replace(/^http:\/\//, "");
+    $("count").textContent = S.players + (S.players === 1 ? " player" : " players") + " joined";
+    const key = S.names.join("\n");
+    if (key !== lastNames) {
+      const old = new Set(lastNames.split("\n"));
+      $("names").replaceChildren(...S.names.map(n => { const s = el("span", { textContent: n }); if (old.has(n)) s.style.animation = "none"; return s; }));
+      lastNames = key;
+    }
+  } else if (phase === "question") {
+    const q = S.question;
+    const key = q.id + "|" + q.statement.length + "|" + q.images.length;
+    if (lastQ !== key) {
+      lastQ = key;
+      $("qnum").textContent = `Question ${q.number} of ${q.count}`;
+      $("qtitle").textContent = q.title;
+      renderStatement($("qstatement"), q.statement, q.images, im => im.url);
+    }
+    $("subTxt").textContent = `${S.submitted} / ${S.players} submitted`;
+    $("subBar").style.width = S.players ? (100 * S.submitted / S.players) + "%" : 0;
+  } else {
+    const top = S.leaderboard.slice(0, 8);
+    const key = JSON.stringify(top);
+    if (key !== lastBoard) {
+      lastBoard = key;
+      $("rows").replaceChildren(...top.map((r, i) => {
+        const d = el("div", { className: "r" },
+          el("span", { className: "rk", textContent: r.rank }), el("span", { className: "nm", textContent: r.name }),
+          el("span", { className: "gain", textContent: r.last ? "+" + r.last : "" }), el("span", { textContent: r.points }));
+        d.style.animationDelay = (top.length - i) * 0.25 + "s";
+        return d;
+      }));
+    }
+  }
+}
+function tick() {
+  if (!S) return;
+  const t = $("timer");
+  if (!S.deadline) { t.textContent = "--:--"; return; }
+  const left = S.deadline - (Date.now() / 1000 + skew);
+  if (!S.open || left <= 0) { t.textContent = "Time's up"; t.className = "timer done"; return; }
+  t.textContent = fmtTime(left); t.className = "timer" + (left < 30 ? " low" : "");
+}
+async function poll() {
+  try { S = await (await fetch("/api/board")).json(); skew = S.now - Date.now() / 1000; render(); } catch {}
+}
+poll(); setInterval(poll, 1500); setInterval(tick, 250);
+</script>
+</body>
+</html>
