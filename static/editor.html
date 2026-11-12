@@ -76,17 +76,40 @@
   details > summary { cursor: pointer; font-weight: 700; }
   .hidden { display: none !important; }
   .empty { color: var(--muted); padding: 40px; text-align: center; line-height: 1.6; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+  .tabs button.on { background: #fff; color: var(--accent); border-color: #fff; }
+  /* tutorial */
+  .tut { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 14px; padding: 14px 16px; align-items: start; }
+  @media (max-width: 900px) { .tut { grid-template-columns: 1fr; } .tut nav { position: static !important; } }
+  .tut nav { position: sticky; top: 62px; }
+  .tut nav a { display: block; padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; font-weight: 600; }
+  .tut nav a:hover { background: var(--bg); }
+  .tut nav a.sub { font-weight: 400; padding-left: 20px; font-size: 13px; }
+  .tut article { max-width: 920px; font-size: 14px; line-height: 1.55; }
+  .tut section { scroll-margin-top: 62px; }
+  .tut h2 { margin: 0 0 6px; font-size: 19px; }
+  .tut h4 { margin: 16px 0 4px; font-size: 14.5px; scroll-margin-top: 62px; }
+  .tut code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--bg); border-radius: 4px; padding: 0 4px; font-size: 13px; }
+  .tut pre { font: 13px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--code-bg); color: #f1eefb; padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 6px 0 10px; }
+  .tut pre code { background: none; padding: 0; color: inherit; }
+  .tut table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 13.5px; }
+  .tut th, .tut td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+  .tut th { background: var(--bg); }
+  .tut .sig { font: 700 13.5px ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--accent); }
+  .tut .note { background: #fff6dc; border: 1px solid #ffd77a; border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
 </style>
 </head>
 <body>
 <div class="top">
   <b>CodeQuiz Editor</b>
+  <span class="tabs"><button id="tabEdit" class="on">Quizzes</button><button id="tabTut">📖 Tutorial</button></span>
   <span class="save" id="saveState">No quiz open</span>
   <span class="sp"></span>
   <a href="/host" target="host">Host console ↗</a>
 </div>
 
-<div class="layout">
+<div class="layout" id="editView">
   <!-- sidebar: quizzes -->
   <div>
     <div class="card">
@@ -117,7 +140,8 @@
     <div class="card empty" id="welcome">
       <b>Pick a quiz on the left, or make a new one.</b><br>
       Every change is saved automatically. Each quiz is one file (text, images, tests and solutions in one place).<br>
-      To move a quiz to another laptop: <b>Export file</b> here and <b>Import</b> it there, or use a <b>Share link</b> on the same Wi-Fi.
+      To move a quiz to another laptop: <b>Export file</b> here and <b>Import</b> it there, or use a <b>Share link</b> on the same Wi-Fi.<br>
+      New here? Read the <a href="#tutorial">📖 Tutorial</a>.
     </div>
     <div id="editor" class="hidden">
       <div id="banner"></div>
@@ -158,6 +182,259 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ================= tutorial ================= -->
+<div class="tut hidden" id="tutView">
+  <nav class="card">
+    <a href="#t-start">1. Quick start</a>
+    <a href="#t-quiz">2. Quiz settings</a>
+    <a href="#t-question">3. A question</a>
+    <a class="sub" href="#t-format">Statement formatting</a>
+    <a class="sub" href="#t-classes">Class name &amp; code</a>
+    <a href="#t-tests">4. Tests</a>
+    <a class="sub" href="#t-output">Output tests</a>
+    <a class="sub" href="#t-code">Code tests</a>
+    <a class="sub" href="#t-options">Weight, hidden, time</a>
+    <a href="#t-api">5. Test functions</a>
+    <a class="sub" href="#f-check">check(actual, expected)</a>
+    <a class="sub" href="#f-checkd">check(double, double, tol)</a>
+    <a class="sub" href="#f-checkb">check(condition)</a>
+    <a class="sub" href="#f-fail">fail(message)</a>
+    <a class="sub" href="#f-output">output(...)</a>
+    <a class="sub" href="#f-checkoutput">checkOutput(...)</a>
+    <a class="sub" href="#f-anyorder">checkOutputAnyOrder(...)</a>
+    <a class="sub" href="#f-lines">lines(text)</a>
+    <a href="#t-verify">6. Checking your tests</a>
+    <a href="#t-example">7. Full example</a>
+    <a href="#t-host">8. Running a session</a>
+    <a href="#t-points">9. Points</a>
+    <a href="#t-share">10. Sharing quizzes</a>
+  </nav>
+  <article>
+    <section class="card" id="t-start">
+      <h2>1. Quick start</h2>
+      <ol>
+        <li>Click <b>Quizzes</b> (top left), then <b>+ New</b>. Everything saves automatically: the top bar says <i>Saved ✓</i>.</li>
+        <li><b>+ Add</b> a question. Write the statement, set the <b>class name</b> students write, the <b>starter code</b> and your <b>reference solution</b>.</li>
+        <li>Add tests: <b>+ Output test</b> (input → expected output) or <b>+ Code test</b> (Java that calls the student's methods).</li>
+        <li>Click <b>▶ Check tests with reference solution</b>. Everything should be green. Then <b>Run tests on starter code</b>: most should fail.</li>
+        <li>Open the <a href="/host" target="host">Host console</a>, pick the quiz, <b>Use this quiz</b>, ▶ a question.</li>
+      </ol>
+      <p class="hint">Tip: open the <i>Example: getting started</i> quiz and click <b>Duplicate</b> to start from something that works.</p>
+    </section>
+
+    <section class="card" id="t-quiz">
+      <h2>2. Quiz settings (shared by all questions)</h2>
+      <table>
+        <tr><th>Field</th><th>What it does</th></tr>
+        <tr><td><b>Quiz title</b></td><td>Name in the list and on the host console.</td></tr>
+        <tr><td><b>Setup &amp; rules</b></td><td>Optional. Shown to students as a fold-out box on every question (same formatting as statements). Good for the description of a class used in all questions.</td></tr>
+        <tr><td><b>Given code</b></td><td>Classes students may use, e.g. <code>Room</code>. Students see it, and it's compiled with every submission. If a student writes a class with the same name, <b>their version</b> is used (so they can add fields/methods).</td></tr>
+        <tr><td><b>Hidden test helpers</b></td><td>Code only the tests can use, never shown to students, e.g. a class <code>Lab</code> with a method that builds a labyrinth. You can put several classes here. <code>public</code> is removed automatically.</td></tr>
+      </table>
+    </section>
+
+    <section class="card" id="t-question">
+      <h2>3. A question</h2>
+      <table>
+        <tr><th>Field</th><th>What it does</th></tr>
+        <tr><td><b>Title</b></td><td>Shown to students and on the board.</td></tr>
+        <tr><td><b>Minutes</b></td><td>Time limit. Answering faster gives a speed bonus (see <a href="#t-points">Points</a>).</td></tr>
+        <tr><td><b>Class name</b></td><td>The class the student writes, e.g. <code>Solution</code>. Output tests run its <code>main</code>; code tests call it, e.g. <code>Solution.isPrime(7)</code>.</td></tr>
+        <tr><td><b>Statement</b></td><td>The task text, with a live preview. Formatting below.</td></tr>
+        <tr><td><b>Images</b></td><td><i>Add image</i>, paste a screenshot (Ctrl+V) or drag a file in. <i>Put in text</i> places it at the cursor; otherwise images show below the text.</td></tr>
+        <tr><td><b>Starter code</b></td><td>What students start with in their editor.</td></tr>
+        <tr><td><b>Reference solution</b></td><td>Your solution. <b>Never shown to students</b>, used to check the tests.</td></tr>
+      </table>
+
+      <h4 id="t-format">Statement formatting</h4>
+      <table>
+        <tr><th>You write</th><th>You get</th></tr>
+        <tr><td><code># Title</code>, <code>## Sub</code>, <code>### Small</code></td><td>Headings</td></tr>
+        <tr><td><code>- item</code> or <code>* item</code></td><td>Bullet list</td></tr>
+        <tr><td><code>1. item</code></td><td>Numbered list</td></tr>
+        <tr><td><code>**bold**</code>, <code>*italic*</code></td><td><b>bold</b>, <i>italic</i></td></tr>
+        <tr><td><code>`code`</code></td><td>Inline code</td></tr>
+        <tr><td><code>```</code> on its own line, code, <code>```</code></td><td>Code block</td></tr>
+        <tr><td><code>&gt; Which type do you need?</code></td><td>Highlighted question box (the thing to think about)</td></tr>
+        <tr><td><code>[text](https://...)</code></td><td>Link</td></tr>
+        <tr><td><code>![caption](img:ID)</code></td><td>An uploaded image (inserted for you by <i>Put in text</i>)</td></tr>
+      </table>
+
+      <h4 id="t-classes">Class name &amp; how student code is put together</h4>
+      <ul>
+        <li>The student's code, the <b>given code</b> and the <b>hidden helpers</b> are compiled together. <code>public</code> on top-level classes is removed, so students may write several classes in one answer.</li>
+        <li>If the student writes methods <b>without a class</b> around them, they are wrapped in a class with the question's class name.</li>
+        <li><code>main(String[] args)</code>, <code>main()</code> and non-static (Java 25) <code>main</code> all work.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="t-tests">
+      <h2>4. Tests</h2>
+      <p>A question has any number of tests of two kinds. While a question is open, submissions are only <b>compiled</b>. Tests run when the question closes, or when you click <i>Compile &amp; run tests</i> on one submission.</p>
+
+      <h4 id="t-output">Output tests</h4>
+      <p>Runs <code>main</code> of the question's class with <b>Input</b> as <code>System.in</code> and compares what it prints with <b>Expected output</b>. Choose how strictly:</p>
+      <table>
+        <tr><th>Compare</th><th>Passes when…</th><th>Example: expected <code>1 2</code> / <code>3</code></th></tr>
+        <tr><td><b>Same lines</b> (default)</td><td>Same lines in the same order. Spaces at line ends and empty lines at the end don't matter.</td><td><code>"1 2  \n3\n\n"</code> ✓ · <code>"1  2\n3"</code> ✗</td></tr>
+        <tr><td><b>Exactly the same</b></td><td>Character for character (only <code>\r\n</code> vs <code>\n</code> is ignored).</td><td><code>"1 2\n3\n"</code> ✗ (extra newline)</td></tr>
+        <tr><td><b>Same words/numbers</b></td><td>Same words in the same order; spaces and line breaks don't matter.</td><td><code>"1\n2 3"</code> ✓</td></tr>
+        <tr><td><b>Same lines, any order</b></td><td>Same lines, any order. Spaces at the start/end of lines and empty lines don't matter. Duplicates count.</td><td><code>"3\n1 2"</code> ✓</td></tr>
+        <tr><td><b>Only the numbers</b></td><td>Only the numbers are compared (in order, ±0.000001); all other text is ignored.</td><td><code>"Sum: 1, 2, total 3"</code> ✓</td></tr>
+      </table>
+      <p class="hint">Leave <i>Expected output</i> empty and click <b>Fill empty expected outputs</b>: your reference solution's output is copied in.</p>
+
+      <h4 id="t-code">Code tests</h4>
+      <p>A few lines of Java that call the student's code and check results with the <a href="#t-api">test functions</a>. They are the body of a method, so you can use variables, loops, the given code and the hidden helpers. <code>java.util.*</code> and <code>java.util.function.*</code> are imported, plus whatever the student and the given code import.</p>
+      <pre><code>int[] a = {3, 1, 2};
+check(Solution.max(a), 3);
+check(Arrays.equals(a, new int[]{3, 1, 2}), "max must not change the array");</code></pre>
+      <p>If a code test doesn't compile with a student's code (e.g. they named the method differently), <b>only that test fails</b>, with the compiler message.</p>
+
+      <h4 id="t-options">Weight, hidden, time</h4>
+      <table>
+        <tr><td><b>Name</b></td><td>What students see, e.g. "empty array", "negative numbers". Make it say what is tested.</td></tr>
+        <tr><td><b>Weight</b></td><td>Partial points = weighted share of passed tests. Give hard tests (edge cases, big inputs) more weight.</td></tr>
+        <tr><td><b>Time (s)</b></td><td>Seconds before the test counts as too slow (endless loop or not efficient enough). Use it to test efficiency with a big input.</td></tr>
+        <tr><td><b>Hidden</b></td><td>Students only see that it failed, not the input or the expected output.</td></tr>
+      </table>
+      <p>Every test runs separately: fresh <code>static</code> fields, its own input/output, a 512 MB stack. A <code>System.exit</code>, a crash or an endless loop only fails that one test.</p>
+    </section>
+
+    <section class="card" id="t-api">
+      <h2>5. Test functions (for code tests)</h2>
+      <p>Every code test can call these directly. They come from <code>runner/CQ.java</code>. A failing check stops the test and shows its message to the student.</p>
+
+      <h4 id="f-check"><span class="sig">check(actual, expected)</span></h4>
+      <p>Passes if the two values are equal. The message is <code>expected …, got …</code>.</p>
+      <ul>
+        <li><b>Numbers by value:</b> <code>int</code>, <code>long</code>, <code>short</code>, <code>byte</code> compare exactly, so <code>check(sumLong(), 4000000000L)</code> and <code>check(count(), 3)</code> both work. Doubles have a tiny tolerance (relative 1e-9).</li>
+        <li><b>Arrays and lists</b> element by element, also nested (<code>int[][]</code>) and mixed (an <code>ArrayList</code> against an array).</li>
+        <li><b>Strings and chars</b> exactly. <code>"a"</code> is not <code>'a'</code>.</li>
+        <li><b>Everything else</b> with <code>equals</code>. For your own classes without <code>equals</code> this compares references; check fields instead: <code>check(r.name, "R3")</code>.</li>
+      </ul>
+      <pre><code>check(Solution.isPrime(7), true);
+check(Solution.reverse("abc"), "cba");
+check(Solution.sorted(new int[]{3, 1, 2}), new int[]{1, 2, 3});
+check(Solution.digits(120), List.of(1, 2, 0));</code></pre>
+
+      <h4 id="f-checkd"><span class="sig">check(double actual, double expected, double tolerance)</span></h4>
+      <p>For doubles where you decide how close is close enough.</p>
+      <pre><code>check(Solution.average(new int[]{1, 2}), 1.5, 1e-9);
+check(Solution.sqrt(2), 1.41421356, 1e-6);</code></pre>
+
+      <h4 id="f-checkb"><span class="sig">check(boolean condition)</span> · <span class="sig">check(boolean condition, String message)</span></h4>
+      <p>Passes if the condition is <code>true</code>. Always give a message students understand: without one they only see "check failed".</p>
+      <pre><code>int[] a = {5, 1, 4};
+Solution.sort(a);
+check(a[0] &lt;= a[1] &amp;&amp; a[1] &lt;= a[2], "the array is not sorted: " + Arrays.toString(a));</code></pre>
+
+      <h4 id="f-fail"><span class="sig">fail(String message)</span></h4>
+      <p>Fails the test right away with your message. For conditions that don't fit in one <code>check</code>.</p>
+      <pre><code>Room[] r = Lab.build(new int[]{1, 2}, new int[][]{{1}, {}});
+for (Room x : r) {
+    if (x.doorsTo == null) fail("doorsTo of " + x.name + " was set to null");
+}</code></pre>
+
+      <h4 id="f-output"><span class="sig">output(() -&gt; …)</span> · <span class="sig">output(String input, () -&gt; …)</span></h4>
+      <p>Runs the code and <b>returns what it printed</b> as a <code>String</code>, without comparing anything. The second form gives the code its own <code>System.in</code>, e.g. to call <code>main</code> with input.</p>
+      <pre><code>String printed = output(() -&gt; Solution.printTable(3));
+check(printed.contains("9"), "3 x 3 = 9 is missing");
+
+String out = output("3 4\n", () -&gt; Solution.main(new String[0]));
+check(out.strip(), "7");</code></pre>
+
+      <h4 id="f-checkoutput"><span class="sig">checkOutput(() -&gt; …, String expected)</span></h4>
+      <p>Runs the code and checks the printed <b>lines, in order</b>. Spaces at line ends and empty lines at the end don't matter; spaces at the start of a line do.</p>
+      <pre><code>checkOutput(() -&gt; Solution.countdown(3), "3\n2\n1\nGo!");</code></pre>
+
+      <h4 id="f-anyorder"><span class="sig">checkOutputAnyOrder(() -&gt; …, String expected)</span></h4>
+      <p>Same lines, but <b>in any order</b>. Use it when the order depends on the student's approach, e.g. printing all paths or all exits of a labyrinth.</p>
+      <ul>
+        <li>Spaces at the start/end of a line and double spaces don't matter; empty lines are ignored.</li>
+        <li>The order <b>inside</b> a line still matters: <code>R3 R1 R0</code> is not <code>R0 R1 R3</code>.</li>
+        <li><b>Duplicates count</b>: printing a path twice fails. Missing or extra lines fail too.</li>
+      </ul>
+      <pre><code>Room[] r = Lab.build(new int[]{1, 2, 2, 9, 5}, new int[][]{{1, 2, 4}, {3}, {3}, {}, {}});
+checkOutputAnyOrder(() -&gt; Labyrinth.printPaths(r[0]), "R0 R1 R3\nR0 R2 R3\nR0 R4");</code></pre>
+
+      <h4 id="f-lines"><span class="sig">lines(String text)</span></h4>
+      <p>Splits text into a <code>List&lt;String&gt;</code> of lines (spaces at line ends and empty lines at the end removed). Handy with <code>output</code> for your own checks.</p>
+      <pre><code>List&lt;String&gt; l = lines(output(() -&gt; Solution.printAll(5)));
+check(l.size(), 5);
+check(l.get(0), "1");</code></pre>
+
+      <div class="note"><b>Common pitfall:</b> inside <code>() -&gt; …</code> you can only use variables that are not changed afterwards (Java's "effectively final" rule). Make a new variable if needed.</div>
+    </section>
+
+    <section class="card" id="t-verify">
+      <h2>6. Checking your tests</h2>
+      <table>
+        <tr><td><b>▶ Check tests with reference solution</b></td><td>Runs every test on your solution. All should pass; each test card turns green or red and shows why.</td></tr>
+        <tr><td><b>Fill empty expected outputs</b></td><td>Copies your solution's output into output tests whose expected output is empty.</td></tr>
+        <tr><td><b>Run tests on starter code</b></td><td>Most tests should <b>fail</b> here; if one passes, it doesn't test much.</td></tr>
+        <tr><td><b>Use the reference solution's output as expected</b></td><td>Appears on an output test when your solution prints something different from the expected output.</td></tr>
+      </table>
+      <p class="hint">Good habit: also paste a typical wrong answer (off-by-one, <code>int</code> instead of <code>long</code>) as the reference solution for a moment and check that some test catches it.</p>
+    </section>
+
+    <section class="card" id="t-example">
+      <h2>7. Full example</h2>
+      <p><b>Class name:</b> <code>Solution</code>. <b>Statement:</b></p>
+      <pre><code>Write a method that returns the **largest** value of an array.
+
+- The array has at least one element.
+- Values can be negative.
+
+```
+public static int max(int[] a)
+```</code></pre>
+      <p><b>Tests:</b></p>
+      <table>
+        <tr><th>Name</th><th>Kind</th><th>Weight</th><th>Code</th></tr>
+        <tr><td>example</td><td>code</td><td>1</td><td><code>check(Solution.max(new int[]{1, 5, 3}), 5);</code></td></tr>
+        <tr><td>one element</td><td>code</td><td>1</td><td><code>check(Solution.max(new int[]{7}), 7);</code></td></tr>
+        <tr><td>all negative</td><td>code</td><td>2</td><td><code>check(Solution.max(new int[]{-4, -2, -9}), -2);</code></td></tr>
+        <tr><td>max at the end (hidden)</td><td>code</td><td>2</td><td><code>check(Solution.max(new int[]{1, 2, 3, 4}), 4);</code></td></tr>
+      </table>
+      <p>"all negative" catches students who start with <code>int max = 0;</code>, "max at the end" catches loops that stop one too early.</p>
+    </section>
+
+    <section class="card" id="t-host">
+      <h2>8. Running a session</h2>
+      <ol>
+        <li>Start the server (<code>start.bat</code>). It prints the address for students (same Wi-Fi).</li>
+        <li><a href="/host" target="host">Host console</a>: pick the quiz, <b>Use this quiz</b>. Put <a href="/board" target="board">/board</a> on the projector.</li>
+        <li>▶ a question. When the time is up or you click <b>Close now</b>, the tests run on every submission.</li>
+        <li>Grade: buttons, or keys <b>1</b> correct, <b>2</b> by tests, <b>0</b> wrong, <b>J</b>/<b>K</b> next/previous. Or <b>Grade all by tests</b>.</li>
+        <li>Fixed a test during the session? <b>Reload changes</b> takes the newest version from the editor without losing players or points.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="t-points">
+      <h2>9. Points</h2>
+      <table>
+        <tr><td><b>Correct</b></td><td>1000 + speed bonus (up to 500: the earlier in the time limit, the more)</td></tr>
+        <tr><td><b>By tests</b></td><td>(1000 + speed bonus) × weighted share of passed tests. All pass = correct, none = wrong.</td></tr>
+        <tr><td><b>Partial</b> without tests run</td><td>500 + half the speed bonus</td></tr>
+        <tr><td><b>Wrong</b></td><td>0</td></tr>
+      </table>
+    </section>
+
+    <section class="card" id="t-share">
+      <h2>10. Sharing quizzes with other TAs</h2>
+      <ul>
+        <li>Each quiz is <b>one file</b> in <code>quizzes/</code>: text, images, tests and solutions.</li>
+        <li><b>⬇ Export file</b> downloads it; the other TA uses <b>Import → From a file</b> (or drops it on the editor).</li>
+        <li><b>🔗 Share link</b>: same Wi-Fi, works for 30 minutes; paste it under Import on the other laptop.</li>
+        <li>If the quiz already exists there, they choose: replace (the old one is kept as a backup) or keep both.</li>
+        <li><b>Older versions…</b> restores autosaved versions; deleted quizzes are under <i>Recently deleted</i>.</li>
+      </ul>
+      <div class="note">Exported files and share links contain the <b>reference solutions</b>. Don't give them to students.</div>
+    </section>
+  </article>
 </div>
 
 <script>
@@ -567,7 +844,8 @@ String printed = output("3 4\\n", () -> ${esc(q.className)}.main(new String[0]))
 fail("custom message");</pre>
   <p>You can use loops, variables and the given code / hidden helpers (e.g. <code>Room[] r = Lab.build(...)</code>). <code>java.util.*</code> is imported.</p>
   <p><b>Weight:</b> partial points = weighted share of tests passed, so give hard tests a bigger weight. <b>Hidden:</b> students only see that a hidden test failed, not its input. <b>Time:</b> seconds before a test counts as too slow.</p>
-  <p>Every test runs with fresh static fields, its own input/output and a big stack. If a test doesn't compile against a student's code (e.g. a wrong method name), only that test fails.</p>`;
+  <p>Every test runs with fresh static fields, its own input/output and a big stack. If a test doesn't compile against a student's code (e.g. a wrong method name), only that test fails.</p>
+  <p>📖 All functions with examples: <a href="#t-api">Tutorial → Test functions</a>.</p>`;
   return d;
 }
 
@@ -669,6 +947,24 @@ function renderAll() {
   renderQList();
   renderQEditor();
 }
+
+// ---------------- tabs: quizzes / tutorial ----------------
+// #tutorial (or a link to one of its sections, #t-… / #f-…) shows the tutorial.
+function showTab() {
+  const h = location.hash;
+  const tut = h === "#tutorial" || h.startsWith("#t-") || h.startsWith("#f-");
+  $("tutView").classList.toggle("hidden", !tut);
+  $("editView").classList.toggle("hidden", tut);
+  $("tabTut").classList.toggle("on", tut);
+  $("tabEdit").classList.toggle("on", !tut);
+  if (tut && h !== "#tutorial") { const t = document.querySelector(h); if (t) t.scrollIntoView(); }
+  else window.scrollTo(0, 0);
+}
+$("tabTut").onclick = () => { location.hash = "tutorial"; };
+$("tabEdit").onclick = () => { history.pushState(null, "", location.pathname + location.search); showTab(); };
+window.addEventListener("hashchange", showTab);
+window.addEventListener("popstate", showTab);
+showTab();
 
 loadList().then(() => {
   let want = new URLSearchParams(location.search).get("quiz");
